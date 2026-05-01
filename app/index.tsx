@@ -20,7 +20,7 @@ export default function Splash() {
         }}
       >
         {/* Hero illustration */}
-        <View style={{ position: 'relative', height: 240, marginTop: 8 }}>
+        <View style={{ position: 'relative', height: 380, marginTop: 8 }}>
           <View
             style={{
               position: 'absolute',
@@ -29,12 +29,12 @@ export default function Splash() {
               right: -24,
             }}
           >
-            <PragueScroll height={110} opacity={0.55} speedPxPerSec={16} />
+            <PragueScroll height={440} opacity={0.55} speedPxPerSec={28} />
           </View>
           <View
             style={{
               position: 'absolute',
-              top: 0,
+              top: 20,
               left: -16,
             }}
           >
@@ -43,7 +43,7 @@ export default function Splash() {
           <View
             style={{
               position: 'absolute',
-              top: 50,
+              top: 70,
               right: -10,
             }}
           >
@@ -52,7 +52,7 @@ export default function Splash() {
           <View
             style={{
               position: 'absolute',
-              top: 80,
+              top: 100,
               left: 90,
             }}
           >
