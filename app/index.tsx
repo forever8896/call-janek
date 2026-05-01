@@ -1,7 +1,7 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Btn } from '@/components/atoms';
 import { Mascot } from '@/components/mascot';
 import { PRAGUE_BG, PragueScroll } from '@/components/prague-scroll';
@@ -12,40 +12,13 @@ export default function Splash() {
   const router = useRouter();
   const t = useT();
   const { lang, toggle } = useLang();
+  const insets = useSafeAreaInsets();
 
   return (
     <View style={{ flex: 1, backgroundColor: PRAGUE_BG }}>
       {/* Skyline runs edge-to-edge from the top of the screen, no cropping. */}
       <SafeAreaView edges={['top']} style={{ backgroundColor: PRAGUE_BG }}>
         <PragueScroll height={160} opacity={1} speedPxPerSec={22} />
-
-        {/* Floating EN/CZ switcher in the top-right corner */}
-        <Pressable
-          onPress={toggle}
-          hitSlop={8}
-          style={{
-            position: 'absolute',
-            top: 12,
-            right: 16,
-            paddingHorizontal: 12,
-            paddingVertical: 7,
-            backgroundColor: HG.butter,
-            borderWidth: BORDER.half,
-            borderColor: HG.ink,
-            borderRadius: RADIUS.pill,
-          }}
-        >
-          <Text
-            style={{
-              fontFamily: FONT.bodyBold,
-              fontSize: 12,
-              color: HG.ink,
-              letterSpacing: 0.5,
-            }}
-          >
-            {lang} ↔
-          </Text>
-        </Pressable>
       </SafeAreaView>
 
       <SafeAreaView style={{ flex: 1 }} edges={['bottom', 'left', 'right']}>
@@ -147,6 +120,35 @@ export default function Splash() {
           </View>
         </ScrollView>
       </SafeAreaView>
+
+      {/* EN/CZ switcher anchored to the screen's top-right, above the skyline */}
+      <Pressable
+        onPress={toggle}
+        hitSlop={8}
+        style={{
+          position: 'absolute',
+          top: insets.top + 12,
+          right: 16,
+          paddingHorizontal: 12,
+          paddingVertical: 7,
+          backgroundColor: HG.butter,
+          borderWidth: BORDER.half,
+          borderColor: HG.ink,
+          borderRadius: RADIUS.pill,
+          zIndex: 10,
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: FONT.bodyBold,
+            fontSize: 12,
+            color: HG.ink,
+            letterSpacing: 0.5,
+          }}
+        >
+          {lang} ↔
+        </Text>
+      </Pressable>
     </View>
   );
 }
