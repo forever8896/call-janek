@@ -3,7 +3,7 @@ import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Btn, Chip } from '@/components/atoms';
-import { IllPragueSkyline, IllTaxi } from '@/components/illustrations';
+import { IllPragueSkyline } from '@/components/illustrations';
 import { Mascot } from '@/components/mascot';
 import { FONT, HG } from '@/theme/tokens';
 
@@ -45,12 +45,11 @@ export default function Splash() {
           <View
             style={{
               position: 'absolute',
-              top: 12,
-              right: 110,
-              transform: [{ rotate: '4deg' }],
+              top: 80,
+              left: 90,
             }}
           >
-            <IllTaxi size={72} />
+            <Mascot kind="angry_sunka" size={110} bobble rotate={-3} delay={800} />
           </View>
         </View>
 

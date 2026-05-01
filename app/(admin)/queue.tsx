@@ -15,7 +15,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AdminHeader, HeaderIconBtn } from '@/components/admin/Header';
 import { QueueRow } from '@/components/admin/QueueRow';
-import { IllTaxi } from '@/components/illustrations';
+import { Mascot, categoryMascot } from '@/components/mascot';
 import { getAdminQueue, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { toUIRow } from '@/lib/mapping';
@@ -188,9 +188,12 @@ export default function AdminQueue() {
                 <Text style={{ color: HG.red }}>{critical} critical</Text> · {high} high · {newCount} new
               </Text>
             </View>
-            <View style={{ transform: [{ rotate: '-6deg' }] }}>
-              <IllTaxi size={48} />
-            </View>
+            {(() => {
+              const top = [...reports]
+                .sort((a, b) => (b.urgency_score ?? 0) - (a.urgency_score ?? 0))[0];
+              const mk = top ? categoryMascot(top.category, 'high') : null;
+              return <Mascot kind={mk ?? 'angry_sunka'} size={64} bobble rotate={-4} />;
+            })()}
           </View>
         </View>
 
