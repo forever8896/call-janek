@@ -273,11 +273,41 @@ Reporter uploads directly to Supabase Storage via a presigned URL issued by our 
 | Actor | Method | Token |
 |---|---|---|
 | Reporter | `supabase.auth.signInAnonymously()` — device-bound, no registration | Supabase anon JWT, `role: reporter` |
-| Janek | Magic link to `janek@honestguide.cz` | Supabase JWT, `raw_user_meta_data.role: admin` |
+| Janek | Email + password (`signInWithPassword`); biometric on subsequent launches | Supabase JWT, `user_metadata.role: admin` |
 
 Admin role is set manually in Supabase dashboard on Janek's user row. No self-service admin registration.
 
-Our API verifies JWTs using Supabase JWKS endpoint. Middleware checks `raw_user_meta_data.role === 'admin'` for protected routes.
+Our API verifies JWTs using Supabase JWKS endpoint. Middleware checks `user_metadata.role === 'admin'` for protected routes.
+
+Why password over magic link: the demo runs on devices that may not have the
+admin's email configured, deep-linking back into Expo Go is fiddly, and we
+want predictable on-stage behavior. Biometric (`expo-local-authentication`)
+gates access on subsequent launches once the Supabase session is persisted in
+AsyncStorage.
+
+### Provisioning the admin user
+
+`auth.create_user` is internal-only on hosted Supabase, so do it in two
+steps:
+
+**1. Create via Dashboard:**
+Authentication → Users → **Add user** → **Create new user** →
+email `janek@honestguide.cz`, set a password, check **Auto Confirm User**.
+
+**2. Promote to admin (Dashboard → SQL Editor):**
+
+```sql
+update auth.users
+set raw_user_meta_data = coalesce(raw_user_meta_data, '{}'::jsonb)
+                         || jsonb_build_object('role', 'admin')
+where email = 'janek@honestguide.cz';
+
+-- Verify
+select email, raw_user_meta_data->>'role' as role
+from auth.users
+where email = 'janek@honestguide.cz';
+-- → janek@honestguide.cz | admin
+```
 
 ---
 

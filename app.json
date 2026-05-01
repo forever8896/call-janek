@@ -53,6 +53,12 @@
           "photosPermission": "Allow Honest Guide to attach photos to your tip.",
           "cameraPermission": "Allow Honest Guide to take photos for your tip."
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Use Face ID to unlock the newsroom."
+        }
       ]
     ],
     "experiments": {

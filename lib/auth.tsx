@@ -1,5 +1,8 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as LocalAuthentication from 'expo-local-authentication';
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -11,12 +14,25 @@ import { supabase } from './supabase';
 
 type Role = 'reporter' | 'admin' | null;
 
+const BIOMETRIC_KEY = 'hg.biometric.enabled';
+
 type AuthCtx = {
   session: Session | null;
   role: Role;
   isReady: boolean;
-  // Admin
-  signInAdmin: (email: string) => Promise<{ error: string | null }>;
+
+  // Biometric gate (only relevant for the admin flow)
+  biometricUnlocked: boolean;
+  biometricEnabled: boolean;
+  biometricSupported: boolean;
+  unlockWithBiometric: () => Promise<{ ok: boolean; error?: string }>;
+  setBiometricEnabled: (enabled: boolean) => Promise<void>;
+
+  // Sign-in / sign-out
+  signInWithPassword: (
+    email: string,
+    password: string,
+  ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
 };
 
@@ -24,25 +40,50 @@ const Ctx = createContext<AuthCtx>({
   session: null,
   role: null,
   isReady: false,
-  signInAdmin: async () => ({ error: 'no provider' }),
+  biometricUnlocked: false,
+  biometricEnabled: false,
+  biometricSupported: false,
+  unlockWithBiometric: async () => ({ ok: false, error: 'no provider' }),
+  setBiometricEnabled: async () => {},
+  signInWithPassword: async () => ({ error: 'no provider' }),
   signOut: async () => {},
 });
 
 function deriveRole(session: Session | null): Role {
   if (!session) return null;
-  const userMeta = session.user?.user_metadata as Record<string, unknown> | undefined;
-  if (userMeta && userMeta.role === 'admin') return 'admin';
+  const meta = session.user?.user_metadata as Record<string, unknown> | undefined;
+  if (meta && meta.role === 'admin') return 'admin';
   return 'reporter';
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [biometricSupported, setBiometricSupported] = useState(false);
+  const [biometricEnabled, setBiometricEnabledState] = useState(false);
+  const [biometricUnlocked, setBiometricUnlocked] = useState(false);
   const ensuredAnon = useRef(false);
 
+  // Probe device biometric support + persisted opt-in once
+  useEffect(() => {
+    (async () => {
+      try {
+        const [hasHw, enrolled, savedFlag] = await Promise.all([
+          LocalAuthentication.hasHardwareAsync(),
+          LocalAuthentication.isEnrolledAsync(),
+          AsyncStorage.getItem(BIOMETRIC_KEY),
+        ]);
+        setBiometricSupported(hasHw && enrolled);
+        setBiometricEnabledState(savedFlag === '1');
+      } catch {
+        // best-effort; never block startup on this
+      }
+    })();
+  }, []);
+
+  // Restore session + ensure anonymous reporter session for tipline use
   useEffect(() => {
     let mounted = true;
-
     (async () => {
       const { data } = await supabase.auth.getSession();
       if (!mounted) return;
@@ -52,8 +93,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setIsReady(true);
       } else if (!ensuredAnon.current) {
         ensuredAnon.current = true;
-        // Auto-sign-in as anonymous reporter so reports.reporter_id is set
-        // and RLS lets reporters see their own past tips.
         const { data: anon, error } = await supabase.auth.signInAnonymously();
         if (error) {
           console.warn('[auth] anonymous sign-in failed:', error.message);
@@ -77,23 +116,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const unlockWithBiometric = useCallback(async () => {
+    try {
+      const res = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Unlock the newsroom',
+        fallbackLabel: 'Use device passcode',
+        disableDeviceFallback: false,
+      });
+      if (res.success) {
+        setBiometricUnlocked(true);
+        return { ok: true };
+      }
+      return {
+        ok: false,
+        error:
+          'error' in res
+            ? (res.error as string | undefined) ?? 'Authentication cancelled'
+            : 'Authentication cancelled',
+      };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  }, []);
+
+  const setBiometricEnabled = useCallback(async (enabled: boolean) => {
+    setBiometricEnabledState(enabled);
+    if (enabled) {
+      await AsyncStorage.setItem(BIOMETRIC_KEY, '1');
+    } else {
+      await AsyncStorage.removeItem(BIOMETRIC_KEY);
+      setBiometricUnlocked(false);
+    }
+  }, []);
+
   const value = useMemo<AuthCtx>(
     () => ({
       session,
       role: deriveRole(session),
       isReady,
-      async signInAdmin(email: string) {
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: { shouldCreateUser: false },
+      biometricUnlocked,
+      biometricEnabled,
+      biometricSupported,
+      unlockWithBiometric,
+      setBiometricEnabled,
+      async signInWithPassword(email, password) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password,
         });
-        return { error: error?.message ?? null };
+        if (error) return { error: error.message };
+        // Fresh password sign-in counts as an unlock for this session
+        setBiometricUnlocked(true);
+        return { error: null };
       },
       async signOut() {
         await supabase.auth.signOut();
+        setBiometricUnlocked(false);
       },
     }),
-    [session, isReady],
+    [
+      session,
+      isReady,
+      biometricUnlocked,
+      biometricEnabled,
+      biometricSupported,
+      unlockWithBiometric,
+      setBiometricEnabled,
+    ],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Btn } from '@/components/atoms';
 import { JanekAvatar } from '@/components/illustrations';
@@ -9,29 +9,50 @@ import { BORDER, FONT, HG } from '@/theme/tokens';
 
 export default function AdminSignIn() {
   const router = useRouter();
-  const { role, isReady, signInAdmin } = useAuth();
+  const {
+    role,
+    isReady,
+    biometricSupported,
+    biometricEnabled,
+    biometricUnlocked,
+    setBiometricEnabled,
+    signInWithPassword,
+  } = useAuth();
+
   const [email, setEmail] = useState('janek@honestguide.cz');
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState('');
+  const [enableBiometric, setEnableBiometric] = useState(biometricEnabled);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // If already signed in as admin, hop straight to the queue.
+  // Already signed in + biometric unlocked → go to queue
   useEffect(() => {
-    if (isReady && role === 'admin') {
+    if (isReady && role === 'admin' && biometricUnlocked) {
       router.replace('/(admin)/queue');
     }
-  }, [isReady, role, router]);
+  }, [isReady, role, biometricUnlocked, router]);
 
-  const onSend = async () => {
+  // Reflect saved biometric pref into the toggle
+  useEffect(() => {
+    setEnableBiometric(biometricEnabled);
+  }, [biometricEnabled]);
+
+  const onSubmit = async () => {
     setError(null);
-    setSending(true);
-    const { error: err } = await signInAdmin(email.trim());
-    setSending(false);
-    if (err) {
-      setError(err);
+    if (!email.trim() || password.length === 0) {
+      setError('Email and password required.');
       return;
     }
-    setSent(true);
+    setSubmitting(true);
+    const { error: err } = await signInWithPassword(email, password);
+    if (err) {
+      setError(err);
+      setSubmitting(false);
+      return;
+    }
+    await setBiometricEnabled(enableBiometric && biometricSupported);
+    setSubmitting(false);
+    // Navigation handled by the effect above once role + biometric flip
   };
 
   return (
@@ -79,7 +100,8 @@ export default function AdminSignIn() {
               color: HG.ink,
             }}
           >
-            Ahoj <Text style={{ fontFamily: FONT.displaySemiItalic, color: HG.redInk }}>Janku</Text>.
+            Ahoj{' '}
+            <Text style={{ fontFamily: FONT.displaySemiItalic, color: HG.redInk }}>Janku</Text>.
           </Text>
           <Text
             style={{
@@ -90,16 +112,15 @@ export default function AdminSignIn() {
               lineHeight: 21,
             }}
           >
-            {sent
-              ? 'Magic link on its way. Tap it on this device to come back signed in.'
-              : 'We email you a one-time link. Tap it on this phone and you’re in.'}
+            Sign in once and we&apos;ll keep you in. Face ID will unlock the queue next
+            time you open the app.
           </Text>
         </View>
 
         <View style={{ gap: 10 }}>
           <View
             style={{
-              paddingVertical: 14,
+              paddingVertical: 12,
               paddingHorizontal: 16,
               backgroundColor: HG.card,
               borderWidth: BORDER.full,
@@ -107,6 +128,18 @@ export default function AdminSignIn() {
               borderRadius: 14,
             }}
           >
+            <Text
+              style={{
+                fontFamily: FONT.bodyBold,
+                fontSize: 10,
+                color: HG.inkMute,
+                textTransform: 'uppercase',
+                letterSpacing: 0.6,
+                marginBottom: 4,
+              }}
+            >
+              Email
+            </Text>
             <TextInput
               value={email}
               onChangeText={setEmail}
@@ -121,9 +154,85 @@ export default function AdminSignIn() {
                 color: HG.ink,
                 padding: 0,
               }}
-              editable={!sending && !sent}
+              editable={!submitting}
             />
           </View>
+
+          <View
+            style={{
+              paddingVertical: 12,
+              paddingHorizontal: 16,
+              backgroundColor: HG.card,
+              borderWidth: BORDER.full,
+              borderColor: HG.ink,
+              borderRadius: 14,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: FONT.bodyBold,
+                fontSize: 10,
+                color: HG.inkMute,
+                textTransform: 'uppercase',
+                letterSpacing: 0.6,
+                marginBottom: 4,
+              }}
+            >
+              Password
+            </Text>
+            <TextInput
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="••••••••"
+              placeholderTextColor={HG.inkMute}
+              style={{
+                fontFamily: FONT.monoBold,
+                fontSize: 13,
+                color: HG.ink,
+                padding: 0,
+              }}
+              editable={!submitting}
+              onSubmitEditing={onSubmit}
+            />
+          </View>
+
+          {biometricSupported && (
+            <Pressable
+              onPress={() => setEnableBiometric((v) => !v)}
+              disabled={submitting}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 10,
+                paddingVertical: 6,
+              }}
+            >
+              <View
+                style={{
+                  width: 22,
+                  height: 22,
+                  borderRadius: 6,
+                  borderWidth: BORDER.half,
+                  borderColor: HG.ink,
+                  backgroundColor: enableBiometric ? HG.ink : 'transparent',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                {enableBiometric && (
+                  <Text style={{ color: HG.cream, fontFamily: FONT.bodyBold, fontSize: 14 }}>
+                    ✓
+                  </Text>
+                )}
+              </View>
+              <Text style={{ fontFamily: FONT.bodySemi, fontSize: 13, color: HG.ink }}>
+                Unlock with Face ID / fingerprint next time
+              </Text>
+            </Pressable>
+          )}
 
           {error && (
             <Text
@@ -143,9 +252,9 @@ export default function AdminSignIn() {
             full
             bg={HG.amberSoft}
             color={HG.ink}
-            onPress={onSend}
+            onPress={onSubmit}
           >
-            {sending ? 'Sending…' : sent ? 'Resend magic link' : 'Send magic link →'}
+            {submitting ? 'Signing in…' : 'Sign in →'}
           </Btn>
         </View>
 
@@ -159,7 +268,7 @@ export default function AdminSignIn() {
             textAlign: 'center',
           }}
         >
-          PASSWORDLESS · ALL ACTIONS LOGGED · CZ HOSTED
+          ALL ACTIONS LOGGED · CZ HOSTED
         </Text>
       </View>
     </SafeAreaView>
