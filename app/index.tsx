@@ -2,9 +2,9 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Btn, Chip } from '@/components/atoms';
-import { IllPragueSkyline } from '@/components/illustrations';
+import { Btn } from '@/components/atoms';
 import { Mascot } from '@/components/mascot';
+import { PragueScroll } from '@/components/prague-scroll';
 import { FONT, HG } from '@/theme/tokens';
 
 export default function Splash() {
@@ -21,8 +21,15 @@ export default function Splash() {
       >
         {/* Hero illustration */}
         <View style={{ position: 'relative', height: 240, marginTop: 8 }}>
-          <View style={{ position: 'absolute', bottom: 0, left: -24, right: -24, opacity: 0.5 }}>
-            <IllPragueSkyline width={450} height={90} />
+          <View
+            style={{
+              position: 'absolute',
+              bottom: 0,
+              left: -24,
+              right: -24,
+            }}
+          >
+            <PragueScroll height={110} opacity={0.55} speedPxPerSec={16} />
           </View>
           <View
             style={{
@@ -53,18 +60,12 @@ export default function Splash() {
           </View>
         </View>
 
-        <View style={{ marginTop: 14 }}>
-          <Chip bg={HG.red} color={HG.cream} sm>
-            ● HONEST GUIDE
-          </Chip>
-        </View>
-
         <Text
           style={{
             fontFamily: FONT.displaySemi,
             fontSize: 42,
             lineHeight: 42,
-            marginTop: 10,
+            marginTop: 22,
             letterSpacing: -1,
             color: HG.ink,
           }}
