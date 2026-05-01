@@ -33,10 +33,14 @@ yarn-error.*
 # local env files
 .env
 .env.*
+.env*.local
 !.env.example
 
 # Claude Code local-only files
 .claude/
+
+# VS Code workspace settings (may contain secrets like terminal env vars)
+.vscode/settings.json
 
 # typescript
 *.tsbuildinfo
