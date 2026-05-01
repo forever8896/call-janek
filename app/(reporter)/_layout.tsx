@@ -1,9 +1,13 @@
 import { Stack } from 'expo-router';
+import { HG } from '@/theme/tokens';
 
 export default function ReporterLayout() {
   return (
-    <Stack>
-      <Stack.Screen name="index" options={{ title: 'Report a problem' }} />
-    </Stack>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: HG.cream },
+      }}
+    />
   );
 }
