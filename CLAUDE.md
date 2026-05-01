@@ -36,12 +36,21 @@ Output: a structured, scored, enriched report ready for Janek's queue.
 
 ## Architecture
 
-- **Mobile client**: Expo (SDK 54) + expo-router + TypeScript + new architecture.
-- **Backend**: Postgres for persistence (reports, users, clusters, evidence).
-- **AI**: LLMs for spam/dedupe/categorization/urgency/entity-extraction; **Whisper** for voice transcription; web-search tool for evidence gathering.
-- **Auth**: role-based — `reporter` (public) vs `admin` (Janek). Two distinct UI flows from a single binary.
+- **Mobile client**: Expo (SDK 54) + expo-router + TypeScript + new architecture. Cross-platform (iOS + Android) from one codebase; EAS Update for OTA JS fixes without app-store review.
+- **Backend platform**: **Supabase** — managed Postgres (persistence + queue substrate), auth, storage (media), Row-Level Security (role enforcement), Realtime (worker wake-up).
+- **Pipeline worker**: small **Bun + Hono** service that runs the AI pipeline. Polls Supabase or subscribes via Realtime for new `queued` reports, processes step-by-step, updates row state.
+- **Queue**: **Postgres-backed, no Redis.** Start with a `reports.status` column (`queued` → `processing` → `done`/`failed`) and a `pipeline_runs` table for per-step state. Swap in `pg-boss` or `river` if/when retries + scheduled jobs + DLQ get painful to hand-roll. Reach for Redis only if volume forces sub-100ms job pickup — Janek's tip volume won't.
+- **AI**: LLMs for spam/dedupe/categorization/urgency/entity-extraction; **Whisper** for voice transcription (server-side via Supabase storage upload → worker transcribes → response); web-search tool for evidence gathering.
+- **Auth**: role-based via Supabase Auth — `reporter` (public, possibly anonymous) vs `admin` (Janek). RLS policies enforce "admin sees all reports, reporter sees only their own." Two distinct UI flows from a single binary, gated at the route-group layout level.
 
-> The Postgres backend and pipeline workers are not yet scaffolded in this repo — only the Expo client. Plan that out before building features that assume a server contract.
+### Why these choices
+
+- **Expo over Swift/native**: reporters span iOS + Android; native UI surface is mundane (audio record, media pick, network); EAS Update is operationally critical for a journalist's tool that may need a fast fix under public scrutiny.
+- **Supabase over self-hosted Postgres**: deletes a chunk of plumbing (auth, storage, RLS, dashboard) so engineering hours go into the pipeline — which is the actual product. Vendor coupling is acceptable; Postgres is portable if we ever migrate out.
+- **Bun/Hono worker over Supabase Edge Functions for the pipeline**: pipeline steps need long timeouts (web research can be 10–30s), full LLM SDK control, and easier local dev. Edge Functions are fine for short request/response work but a poor fit for multi-step jobs.
+- **No Redis**: Postgres-as-queue is ~100 LOC and zero extra infra at our volume. Adding Redis is a future swap, not a day-1 dependency.
+
+> The Supabase backend and Bun/Hono pipeline worker are not yet scaffolded in this repo — only the Expo client. Build the schema + worker before adding client features that assume a server contract.
 
 ## Toolchain
 
@@ -114,15 +123,30 @@ If MCP tools aren't showing up, restart Claude Code in this directory so it re-r
 - Expo Agent access: add username to the Expo Agent Access doc, then use `agent.expo.dev`.
 - Discount: build coupon code `STRV19`.
 
-## Backend / pipeline — to design
+## Backend / pipeline — to scaffold
 
-Not yet scaffolded; decide before writing client code that depends on it:
+Stack chosen (above); concrete shape:
 
-- Postgres schema: `users`, `reports`, `report_media`, `report_clusters` (for dedupe), `evidence` (web-research findings), `categories`, `audit_log`.
-- Pipeline runner: queue-based (each step a job) so failures retry independently and Janek's view never blocks on a slow web search.
-- Whisper: server-side (upload audio → transcript) or on-device (expo-speech / native)? Server-side is simpler to swap models and cheaper to maintain.
-- Auth: separate token/role for `admin` (Janek) vs `reporter`. Reporter flow may be anonymous-by-default.
-- Storage: media (images/video) goes to object storage, not Postgres.
+- **Supabase project**: one project for the whole app. Local dev via `supabase` CLI + Docker, production on Supabase Cloud.
+- **Postgres schema** (managed via Supabase migrations):
+  - `reports` — id, reporter_id (nullable for anon), description, transcript, status, urgency, category, cluster_id, created_at, updated_at
+  - `report_media` — id, report_id, storage_path, kind (image|video|audio), mime_type
+  - `report_clusters` — id, canonical_report_id, summary (groups duplicates)
+  - `evidence` — id, report_id, source_url, snippet, fetched_at (web-research output)
+  - `pipeline_runs` — id, report_id, step, status, started_at, finished_at, error (per-step audit + retry state)
+  - `categories` — seed table of report types
+  - `audit_log` — admin actions for traceability
+- **Storage**: Supabase Storage buckets — `voice/` (audio for Whisper), `media/` (images/video). Reporter uploads via signed URLs; worker reads server-side.
+- **Auth**: Supabase Auth. Anonymous sign-in for reporters (single device-bound session). Admin (Janek) gets a magic-link or passkey login; admin role flagged via Supabase custom claim or `admin_users` table. RLS:
+  - `reports`: reporter can `insert` + `select` own; admin can `select` all.
+  - `evidence` / `pipeline_runs`: admin-only.
+- **Pipeline worker** (`worker/` dir, separate package or repo):
+  - Bun + Hono.
+  - On report insert (`status='queued'`), pick up via Postgres LISTEN/NOTIFY or Supabase Realtime subscription, fall back to a 5s poll.
+  - Steps run in order: spam → dedupe → categorize → urgency → entity extraction → web research. Each step is a row in `pipeline_runs` so a failure restarts at the failed step, not the whole pipeline.
+  - Whisper: invoked from worker after audio upload completes. Transcript written back to `reports.transcript`, then status flips to `queued` for the LLM steps.
+- **Worker hosting**: any process host (Fly.io / Railway / Render / a small VPS). One worker is enough at our volume.
+- **Promotion gate**: `reports` rows are only visible to admin queue **after** spam + dedupe steps complete. Enforce via `status` column + RLS, not at the client.
 
 ## Things NOT to do
 
