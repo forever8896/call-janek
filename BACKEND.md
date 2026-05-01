@@ -745,6 +745,68 @@ In-memory (single instance). Sufficient for MVP.
 
 ---
 
+## 12.5 Deployment (Railway)
+
+The worker is deployed to Railway via Dockerfile (Bun-native — Nixpacks
+defaults to Node and the current nixpkgs no longer ships Node 18).
+
+| | |
+|---|---|
+| Workspace | `Brian Pistar's Projects` |
+| Project   | `call-janek-worker` |
+| Service   | `call-janek-worker` |
+| URL       | `https://call-janek-worker-production.up.railway.app` |
+| Builder   | Dockerfile (`oven/bun:1.2-alpine`) |
+| Health    | `GET /health` → `{ status: "ok", env: "production" }` |
+
+### Files (in `worker/`)
+- `Dockerfile` — Bun base image, copies source, runs `bun run src/index.ts`
+- `railway.json` — pins builder=DOCKERFILE, health check, restart policy
+- `.dockerignore` — keeps `.env`, `node_modules`, `.git` out of the build context
+
+### Environment variables on Railway
+
+Set via `railway variables --set …`. Secrets sourced from local `.env.local`,
+never committed.
+
+```
+NODE_ENV=production
+SUPABASE_URL                  # same project as the Expo client
+SUPABASE_SERVICE_ROLE_KEY     # bypasses RLS — server-only
+ANTHROPIC_API_KEY             # spam / category / urgency / entities / web-research rating
+OPENAI_API_KEY                # whisper transcription + embeddings
+TAVILY_API_KEY                # web search
+```
+
+`PORT` is provided by Railway at runtime — don't set it manually.
+
+### Redeploy
+
+```bash
+cd worker/
+railway up --ci --service call-janek-worker
+```
+
+A successful deploy ends with `Deploy complete`. Verify:
+
+```bash
+curl https://call-janek-worker-production.up.railway.app/health
+# → {"status":"ok","version":"1.0.0","env":"production"}
+```
+
+### Pointing the Expo client at the worker
+
+In the repo root `.env.local`:
+
+```
+EXPO_PUBLIC_API_URL=https://call-janek-worker-production.up.railway.app
+```
+
+Then restart Metro (`bun expo start`). For local-only testing, set it to
+`http://<your-LAN-ip>:3000` and run `bun run dev` inside `worker/`.
+
+---
+
 ## 13. Backlog
 
 ### Priority legend

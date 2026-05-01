@@ -56,7 +56,9 @@ export default function Recording() {
     ).start();
   }, [blink, ringRot]);
 
-  // Request permission + auto-start
+  // Request permission + auto-start.
+  // Don't touch `recorder` in the cleanup: the hook releases its native
+  // handle on unmount and accessing it after release crashes the bridge.
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -79,10 +81,6 @@ export default function Recording() {
     })();
     return () => {
       cancelled = true;
-      // Best-effort stop if user navigates away mid-record
-      if (recorder.isRecording) {
-        recorder.stop().catch(() => {});
-      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
