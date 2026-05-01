@@ -10,6 +10,7 @@ import type {
   ReportListItem,
   SubmitReportBody,
   SubmitReportResponse,
+  TranscribeResponse,
   UploadUrlResponse,
   Category,
 } from './types';
@@ -61,6 +62,36 @@ export async function submitReport(body: SubmitReportBody): Promise<SubmitReport
   });
 }
 
+// Whisper-only call. Uploads audio, returns transcript + storage path so
+// the reporter can review/edit before submission via POST /reports.
+export async function transcribeAudio(opts: {
+  uri: string;
+  mimeType: string;
+  fileName: string;
+}): Promise<TranscribeResponse> {
+  const form = new FormData();
+  form.append('audio', {
+    uri: opts.uri,
+    name: opts.fileName,
+    type: opts.mimeType,
+  } as unknown as Blob);
+
+  const res = await fetch(`${ENV.API_URL}/reports/transcribe`, {
+    method: 'POST',
+    body: form,
+  });
+  const text = await res.text();
+  const body = text ? JSON.parse(text) : null;
+  if (!res.ok) {
+    const code = body?.error?.code ?? 'HTTP_ERROR';
+    const message = body?.error?.message ?? `HTTP ${res.status}`;
+    throw new ApiError(code, message, res.status);
+  }
+  return body as TranscribeResponse;
+}
+
+// Legacy: submit audio + auto-trigger pipeline without review. Kept for
+// backwards-compat; prefer transcribeAudio + submitReport.
 export async function submitAudioReport(opts: {
   uri: string;
   mimeType: string;

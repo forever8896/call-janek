@@ -10,7 +10,7 @@ import { ActivityIndicator, Animated, Easing, Text, View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { Btn, Card, Chip, Waveform } from '@/components/atoms';
 import { ReporterShell, ReporterTopBar } from '@/components/reporter/Shell';
-import { ApiError, submitAudioReport } from '@/lib/api';
+import { ApiError, transcribeAudio } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { BORDER, FONT, HG, hardShadow } from '@/theme/tokens';
@@ -32,7 +32,7 @@ export default function Recording() {
 
   const [permission, setPermission] = useState<'pending' | 'granted' | 'denied'>('pending');
   const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const startedRef = useRef(false);
 
   // Animations
@@ -94,7 +94,7 @@ export default function Recording() {
 
   const onStop = async () => {
     setError(null);
-    setUploading(true);
+    setTranscribing(true);
     try {
       if (recorder.isRecording) {
         await recorder.stop();
@@ -104,20 +104,21 @@ export default function Recording() {
 
       // High-quality preset → .m4a / audio/mp4 on both platforms.
       const fileName = `tip-${Date.now()}.m4a`;
-      const res = await submitAudioReport({
-        uri,
-        mimeType: 'audio/mp4',
-        fileName,
-        reporterId: session?.user?.id,
-      });
+      const mimeType = 'audio/mp4';
+
+      const res = await transcribeAudio({ uri, mimeType, fileName });
 
       router.replace({
-        pathname: '/(reporter)/confirm',
-        params: { id: res.report_id },
+        pathname: '/(reporter)/review',
+        params: {
+          transcript: res.transcript,
+          audioPath: res.audio_path,
+          audioMime: res.mime_type,
+        },
       });
     } catch (e) {
       setError(e instanceof ApiError ? e.message : e instanceof Error ? e.message : String(e));
-      setUploading(false);
+      setTranscribing(false);
     }
   };
 
@@ -269,14 +270,14 @@ export default function Recording() {
           color={HG.cream}
           onPress={onStop}
         >
-          {uploading ? (
+          {transcribing ? (
             <ActivityIndicator color={HG.cream} />
           ) : permission === 'denied' ? (
             t('No mic', 'Bez mikrofonu')
           ) : durationMs < 1000 ? (
             t('Hold on…', 'Moment…')
           ) : (
-            t('Stop & send', 'Stop a odeslat')
+            t('Stop & review', 'Stop a zkontrolovat')
           )}
         </Btn>
       </View>

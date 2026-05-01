@@ -16,6 +16,7 @@ export type {
   SubmitReportBody,
   SubmitReportResponse,
   AudioUploadResponse,
+  TranscribeResponse,
   UploadUrlResponse,
   AdminQueueResponse,
   ApiError,

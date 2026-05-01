@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
@@ -18,9 +18,6 @@ import { ApiError, submitReport, uploadAttachment } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useT } from '@/lib/i18n';
 import { BORDER, FONT, HG, hardShadow } from '@/theme/tokens';
-
-const TR_EN = `I got into a taxi at the Old Town Square around 11pm. The driver said the meter was broken and quoted 1,800 CZK to my hotel near Náměstí Míru. Silver Škoda, no taxi sign on top. Plate started 4AM.`;
-const TR_CZ = `Včera kolem 23:00 jsem nasedl do taxi na Staroměstském náměstí. Řidič řekl, že taxametr je rozbitý, a chtěl 1 800 Kč k hotelu u Náměstí Míru. Stříbrná Škoda bez označení. SPZ 4AM.`;
 
 const MAX_ATTACHMENTS = 5;
 
@@ -47,12 +44,23 @@ function Label({ children }: { children: React.ReactNode }) {
   );
 }
 
+type Params = {
+  transcript?: string;
+  audioPath?: string;
+  audioMime?: string;
+};
+
 export default function Review() {
   const router = useRouter();
   const t = useT();
   const { session } = useAuth();
-  const [text, setText] = useState(t(TR_EN, TR_CZ));
-  const [location, setLocation] = useState('Staroměstské náměstí');
+  const params = useLocalSearchParams<Params>();
+  const fromVoice = !!params.audioPath;
+
+  const [text, setText] = useState(
+    params.transcript?.trim() || t('Tap here to write your tip…', 'Sem napiš svůj tip…'),
+  );
+  const [location, setLocation] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [picking, setPicking] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -120,6 +128,8 @@ export default function Review() {
         text_description: text.trim(),
         location: location.trim() || undefined,
         media_paths: attachments.map((a) => a.storagePath),
+        audio_path: params.audioPath,
+        audio_mime_type: params.audioMime,
         reporter_id: session?.user?.id,
       });
       router.replace({
@@ -135,41 +145,74 @@ export default function Review() {
 
   return (
     <ReporterShell>
-      <ReporterTopBar title={t('Review · 0:47', 'Kontrola · 0:47')} />
+      <ReporterTopBar title={fromVoice ? t('Review your tip', 'Zkontroluj tip') : t('Write a tip', 'Napiš tip')} />
 
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}
       >
-        <Card
-          pad={12}
-          bg={HG.amberSoft}
-          style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 }}
-        >
-          <IllTaxi size={42} />
-          <View style={{ flex: 1 }}>
-            <Text
-              style={{
-                fontFamily: FONT.bodyBold,
-                fontSize: 11,
-                color: HG.inkMute,
-                textTransform: 'uppercase',
-                letterSpacing: 0.6,
-              }}
-            >
-              {t('Looks like', 'Vypadá to na')}
-            </Text>
-            <Text
-              style={{
-                fontFamily: FONT.displaySemiItalic,
-                fontSize: 16,
-                color: HG.ink,
-              }}
-            >
-              {t('Taxi scam · Old Town', 'Taxi podvod · Staré Město')}
-            </Text>
-          </View>
-        </Card>
+        {fromVoice && (
+          <Card
+            pad={12}
+            bg={HG.mint}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 }}
+          >
+            <Text style={{ fontSize: 28 }}>🎙️</Text>
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontFamily: FONT.bodyBold,
+                  fontSize: 11,
+                  color: HG.inkMute,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.6,
+                }}
+              >
+                {t('Transcribed from your voice', 'Přepsáno z hlasu')}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: FONT.displaySemiItalic,
+                  fontSize: 16,
+                  color: HG.ink,
+                }}
+              >
+                {t('Tweak it, then send.', 'Uprav, pak pošli.')}
+              </Text>
+            </View>
+          </Card>
+        )}
+        {!fromVoice && (
+          <Card
+            pad={12}
+            bg={HG.amberSoft}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 }}
+          >
+            <IllTaxi size={42} />
+            <View style={{ flex: 1 }}>
+              <Text
+                style={{
+                  fontFamily: FONT.bodyBold,
+                  fontSize: 11,
+                  color: HG.inkMute,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.6,
+                }}
+              >
+                {t('Tell us', 'Pověz')}
+              </Text>
+              <Text
+                style={{
+                  fontFamily: FONT.displaySemiItalic,
+                  fontSize: 16,
+                  color: HG.ink,
+                }}
+              >
+                {t('What happened, where, who.', 'Co, kde, kdo.')}
+              </Text>
+            </View>
+          </Card>
+        )}
 
         <Label>{t('Your story · tap to edit', 'Váš příběh · klepněte')}</Label>
         <Card pad={14} bg={HG.paper}>

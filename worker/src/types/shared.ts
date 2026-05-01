@@ -100,7 +100,15 @@ export interface SubmitReportBody {
   location?: string
   business_name?: string
   media_paths?: string[]
+  audio_path?: string         // path returned by POST /reports/transcribe
+  audio_mime_type?: string    // e.g. 'audio/mp4'
   reporter_id?: string
+}
+
+export interface TranscribeResponse {
+  transcript: string
+  audio_path: string
+  mime_type: string
 }
 
 // ─── Responses ────────────────────────────────────────────────────────────────
