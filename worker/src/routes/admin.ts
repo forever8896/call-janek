@@ -4,6 +4,7 @@ import { zValidator } from '@hono/zod-validator'
 import { supabase } from '../lib/supabase'
 import { requireAdmin } from '../lib/auth'
 import { processReport } from '../pipeline/runner'
+import { callClaude } from '../lib/claude'
 import { logger } from '../lib/logger'
 import type { ReportListItem } from '../types/shared'
 
@@ -50,7 +51,7 @@ adminRouter.get('/reports', async (c) => {
   }
 
   const reports: ReportListItem[] = (data ?? []).map((r) => {
-    const clusterRel = r.cluster as { report_count: number } | { report_count: number }[] | null
+    const clusterRel = r.cluster as unknown as { report_count: number } | { report_count: number }[] | null
     const cluster_count = Array.isArray(clusterRel)
       ? clusterRel[0]?.report_count ?? null
       : clusterRel?.report_count ?? null
@@ -305,6 +306,184 @@ adminRouter.get('/quarantine', async (c) => {
   }))
 
   return c.json({ reports, total: count ?? 0 })
+})
+
+// ─── POST /admin/search ───────────────────────────────────────────────────────
+// Natural-language search. Claude interprets the query into structured
+// filters; the worker applies them and returns the matching reports plus a
+// short prose summary the client can render.
+const searchSchema = z.object({
+  query: z.string().min(1).max(500),
+})
+
+interface SearchFilters {
+  since?: string | null
+  until?: string | null
+  category?: 'taxi_scam' | 'fake_exchange' | 'online_fraud' | 'restaurant_scam' | 'other' | null
+  status?: 'ready' | 'actioned' | 'archived' | null
+  min_urgency_score?: number | null
+  text_match?: string | null
+  only_clusters?: boolean | null
+}
+
+interface SearchInterpretation {
+  summary: string
+  filters: SearchFilters
+}
+
+adminRouter.post('/search', zValidator('json', searchSchema), async (c) => {
+  const { query } = c.req.valid('json')
+  const now = new Date().toISOString()
+
+  let interp: SearchInterpretation
+  try {
+    interp = await callClaude<SearchInterpretation>({
+      system: `You are a search assistant for Janek, an investigative journalist running a tip line in Prague. He receives reports of scams against tourists.
+
+Categories:
+- taxi_scam — broken-meter taxis, fake plates, "card machine broken"
+- fake_exchange — exchange booths handing out worthless rubles, hidden spreads
+- online_fraud — phishing SMS, fake DPD, dubious listings
+- restaurant_scam — trdelník 350 Kč, hidden service charges, menu tricks
+- other — pickpockets, fake police, miscellaneous
+
+Status options:
+- ready (default — open queue Janek hasn't decided on yet)
+- actioned (Janek decided to pursue)
+- archived (Janek read and parked)
+
+Urgency is 1–10. "high" ≈ 7+, "critical" ≈ 9+.
+
+Current time is ${now}. Interpret relative time references ("today", "last hour", "this week") against that.
+
+If the user's query is general/unfocused (e.g. "what's going on"), default to status=ready and no other filters — show the full open queue.`,
+      prompt: query,
+      tool: {
+        name: 'filter_reports',
+        description:
+          'Translate Janek’s natural-language query into structured filters and produce a 1-sentence plain-English summary.',
+        schema: {
+          type: 'object',
+          properties: {
+            summary: {
+              type: 'string',
+              description:
+                "One natural sentence describing what the user asked + what's being shown. Example: 'Showing the 4 taxi reports from the last hour.'",
+            },
+            filters: {
+              type: 'object',
+              properties: {
+                since: {
+                  type: ['string', 'null'],
+                  description: 'ISO 8601 lower bound for created_at, or null if no time filter.',
+                },
+                until: {
+                  type: ['string', 'null'],
+                  description: 'ISO 8601 upper bound for created_at, or null.',
+                },
+                category: {
+                  type: ['string', 'null'],
+                  enum: [
+                    'taxi_scam',
+                    'fake_exchange',
+                    'online_fraud',
+                    'restaurant_scam',
+                    'other',
+                    null,
+                  ],
+                },
+                status: {
+                  type: ['string', 'null'],
+                  enum: ['ready', 'actioned', 'archived', null],
+                  description: 'Default to "ready" unless the user asks about decided/archived items.',
+                },
+                min_urgency_score: {
+                  type: ['number', 'null'],
+                  description: 'Minimum urgency_score (1-10), or null.',
+                },
+                text_match: {
+                  type: ['string', 'null'],
+                  description: 'Free-text substring to match (case-insensitive) against the report description.',
+                },
+                only_clusters: {
+                  type: ['boolean', 'null'],
+                  description: 'If true, restrict to reports that are part of a multi-report cluster.',
+                },
+              },
+              required: [],
+            },
+          },
+          required: ['summary', 'filters'],
+        },
+      },
+    })
+  } catch (err) {
+    logger.error({ err, query }, 'admin search: claude call failed')
+    return c.json(
+      { error: { code: 'SEARCH_FAILED', message: 'Could not interpret that query' } },
+      500,
+    )
+  }
+
+  const f = interp.filters
+  let q = supabase
+    .from('reports')
+    .select(
+      `id, created_at, text_description, category, urgency_score, urgency_reason,
+       cluster_id, entities,
+       report_media(id),
+       evidence(id),
+       cluster:report_clusters!cluster_id ( report_count )`,
+      { count: 'exact' },
+    )
+    .order('urgency_score', { ascending: false })
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  q = q.eq('status', f.status ?? 'ready')
+  if (f.since) q = q.gte('created_at', f.since)
+  if (f.until) q = q.lte('created_at', f.until)
+  if (f.category) q = q.eq('category', f.category)
+  if (f.min_urgency_score != null) q = q.gte('urgency_score', f.min_urgency_score)
+  if (f.text_match) q = q.ilike('text_description', `%${f.text_match}%`)
+  if (f.only_clusters) q = q.not('cluster_id', 'is', null)
+
+  const { data, count, error } = await q
+
+  if (error) {
+    logger.error({ error }, 'admin search: query failed')
+    return c.json(
+      { error: { code: 'INTERNAL_ERROR', message: 'Search query failed' } },
+      500,
+    )
+  }
+
+  const reports: ReportListItem[] = (data ?? []).map((r) => {
+    const clusterRel = r.cluster as unknown as { report_count: number } | { report_count: number }[] | null
+    const cluster_count = Array.isArray(clusterRel)
+      ? clusterRel[0]?.report_count ?? null
+      : clusterRel?.report_count ?? null
+    return {
+      id: r.id,
+      created_at: r.created_at,
+      text_description: (r.text_description ?? '').slice(0, 200),
+      category: r.category as ReportListItem['category'],
+      urgency_score: r.urgency_score ?? 0,
+      urgency_reason: r.urgency_reason ?? '',
+      cluster_id: r.cluster_id,
+      cluster_count,
+      entity_count: Array.isArray(r.entities) ? r.entities.length : 0,
+      evidence_count: Array.isArray(r.evidence) ? r.evidence.length : 0,
+      has_media: Array.isArray(r.report_media) && r.report_media.length > 0,
+    }
+  })
+
+  return c.json({
+    summary: interp.summary,
+    filters: f,
+    reports,
+    total: count ?? reports.length,
+  })
 })
 
 // ─── POST /admin/quarantine/:id/approve ───────────────────────────────────────

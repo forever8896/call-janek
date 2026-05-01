@@ -18,6 +18,7 @@ import { QueueRow } from '@/components/admin/QueueRow';
 import { Mascot, categoryMascot } from '@/components/mascot';
 import { getAdminQueue, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { toUIRow } from '@/lib/mapping';
 import { supabase } from '@/lib/supabase';
 import type { ReportListItem } from '@/lib/types';
@@ -25,14 +26,12 @@ import { BORDER, FONT, HG, hardShadow } from '@/theme/tokens';
 
 type StatusTab = 'ready' | 'actioned' | 'archived';
 
-const TABS: { label: string; value: StatusTab }[] = [
-  { label: 'Open', value: 'ready' },
-  { label: 'Actioned', value: 'actioned' },
-  { label: 'Archived', value: 'archived' },
-];
-
 // Coalesce Realtime bursts so a 150-report flood doesn't fan out into 150 fetches.
 const REALTIME_DEBOUNCE_MS = 400;
+
+function tabLabelCz(tab: StatusTab): string {
+  return tab === 'ready' ? 'OTEVŘENÉ' : tab === 'actioned' ? 'ŘEŠENÉ' : 'ARCHIV';
+}
 
 // Android needs this opt-in for LayoutAnimation to fire.
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -42,6 +41,12 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export default function AdminQueue() {
   const router = useRouter();
   const { role, isReady } = useAuth();
+  const t = useT();
+  const TABS: { label: string; value: StatusTab }[] = [
+    { label: t('Open', 'Otevřené'), value: 'ready' },
+    { label: t('Actioned', 'Řešené'), value: 'actioned' },
+    { label: t('Archived', 'Archiv'), value: 'archived' },
+  ];
   const [tab, setTab] = useState<StatusTab>('ready');
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -137,8 +142,8 @@ export default function AdminQueue() {
     <SafeAreaView style={{ flex: 1, backgroundColor: HG.sand }}>
       <View style={{ flex: 1, backgroundColor: HG.sand }}>
         <AdminHeader
-          title="Queue"
-          subtitle={`${total} ${tab.toUpperCase()} · ${reports.length} SHOWN`}
+          title={t('Queue', 'Fronta')}
+          subtitle={`${total} ${t(tab.toUpperCase(), tabLabelCz(tab))} · ${reports.length} ${t('SHOWN', 'ZOBRAZENO')}`}
           right={
             <View style={{ flexDirection: 'row', gap: 6 }}>
               <HeaderIconBtn onPress={() => router.push('/(admin)/search')}>⌕</HeaderIconBtn>
@@ -174,7 +179,7 @@ export default function AdminQueue() {
                   color: HG.inkMute,
                 }}
               >
-                This morning
+                {t('This morning', 'Dnes ráno')}
               </Text>
               <Text
                 style={{
@@ -185,7 +190,7 @@ export default function AdminQueue() {
                   color: HG.ink,
                 }}
               >
-                <Text style={{ color: HG.red }}>{critical} critical</Text> · {high} high · {newCount} new
+                <Text style={{ color: HG.red }}>{critical} {t('critical', 'kritických')}</Text> · {high} {t('high', 'vysokých')} · {newCount} {t('new', 'nových')}
               </Text>
             </View>
             {(() => {
@@ -252,7 +257,7 @@ export default function AdminQueue() {
               letterSpacing: 0.4,
             }}
           >
-            SORTED · URGENCY ↓
+            {t('SORTED · URGENCY ↓', 'ŘAZENO · NALÉHAVOST ↓')}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Animated.View
@@ -277,7 +282,7 @@ export default function AdminQueue() {
                 letterSpacing: 0.4,
               }}
             >
-              LIVE
+              {t('LIVE', 'ŽIVĚ')}
             </Text>
           </View>
         </View>
@@ -309,7 +314,7 @@ export default function AdminQueue() {
                   textAlign: 'center',
                 }}
               >
-                Nothing in the queue.{'\n'}You&apos;re all caught up.
+                {t('Nothing in the queue.\nYou’re all caught up.', 'Fronta je prázdná.\nMáš to splněno.')}
               </Text>
             </View>
           )}
@@ -331,7 +336,7 @@ export default function AdminQueue() {
                 letterSpacing: 0.6,
               }}
             >
-              — END · KEEP UP THE GOOD WORK —
+              {t('— END · KEEP UP THE GOOD WORK —', '— KONEC · PĚKNÁ PRÁCE —')}
             </Text>
           )}
         </ScrollView>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { JanekAvatar } from '@/components/illustrations';
+import { useLang } from '@/lib/i18n';
 import { BORDER, FONT, HG, RADIUS, hardShadow } from '@/theme/tokens';
 
 export function AdminHeader({
@@ -14,6 +15,7 @@ export function AdminHeader({
   right?: React.ReactNode;
   onBack?: () => void;
 }) {
+  const { lang, toggle } = useLang();
   return (
     <View
       style={{
@@ -28,13 +30,14 @@ export function AdminHeader({
         gap: 10,
       }}
     >
-      {onBack ? (
+      {onBack && (
         <Pressable
           onPress={onBack}
+          hitSlop={8}
           style={[
             {
-              width: 36,
-              height: 36,
+              width: 32,
+              height: 32,
               borderRadius: RADIUS.sm,
               backgroundColor: HG.card,
               borderWidth: BORDER.half,
@@ -45,11 +48,11 @@ export function AdminHeader({
             hardShadow(2),
           ]}
         >
-          <Text style={{ fontFamily: FONT.bodyBold, fontSize: 16, color: HG.ink }}>←</Text>
+          <Text style={{ fontFamily: FONT.bodyBold, fontSize: 15, color: HG.ink }}>←</Text>
         </Pressable>
-      ) : (
-        <JanekAvatar size={36} />
       )}
+      {/* Janek lives in the top-left of every newsroom screen */}
+      <JanekAvatar size={36} />
       <View style={{ flex: 1 }}>
         <Text
           style={{
@@ -75,6 +78,32 @@ export function AdminHeader({
           </Text>
         )}
       </View>
+
+      {/* Language switcher — same affordance as the reporter top bar */}
+      <Pressable
+        onPress={toggle}
+        hitSlop={6}
+        style={{
+          paddingHorizontal: 10,
+          paddingVertical: 6,
+          backgroundColor: HG.butter,
+          borderWidth: BORDER.half,
+          borderColor: HG.ink,
+          borderRadius: 999,
+        }}
+      >
+        <Text
+          style={{
+            fontFamily: FONT.bodyBold,
+            fontSize: 11,
+            color: HG.ink,
+            letterSpacing: 0.5,
+          }}
+        >
+          {lang} ↔
+        </Text>
+      </Pressable>
+
       {right}
     </View>
   );

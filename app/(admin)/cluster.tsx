@@ -4,6 +4,7 @@ import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Chip } from '@/components/atoms';
 import { AdminHeader } from '@/components/admin/Header';
+import { useT } from '@/lib/i18n';
 import { shortId } from '@/lib/mapping';
 import { supabase } from '@/lib/supabase';
 import { BORDER, FONT, HG, hardShadow } from '@/theme/tokens';
@@ -24,6 +25,7 @@ type ClusterMeta = {
 
 export default function AdminCluster() {
   const router = useRouter();
+  const t = useT();
   const { clusterId } = useLocalSearchParams<{ clusterId?: string }>();
   const [meta, setMeta] = useState<ClusterMeta | null>(null);
   const [rows, setRows] = useState<ClusterRow[]>([]);
@@ -71,8 +73,12 @@ export default function AdminCluster() {
     <SafeAreaView style={{ flex: 1, backgroundColor: HG.sand }}>
       <View style={{ flex: 1, backgroundColor: HG.sand }}>
         <AdminHeader
-          title="Cluster"
-          subtitle={meta ? `${meta.report_count} REPORTS` : 'Loading…'}
+          title={t('Cluster', 'Skupina')}
+          subtitle={
+            meta
+              ? `${meta.report_count} ${t('REPORTS', meta.report_count < 5 ? 'TIPY' : 'TIPŮ')}`
+              : t('Loading…', 'Načítám…')
+          }
           onBack={() => router.back()}
         />
 
@@ -117,7 +123,7 @@ export default function AdminCluster() {
                       color: HG.inkMute,
                     }}
                   >
-                    Rolled-up incident
+                    {t('Rolled-up incident', 'Sdružený případ')}
                   </Text>
                   <Text
                     style={{
@@ -128,7 +134,10 @@ export default function AdminCluster() {
                       color: HG.ink,
                     }}
                   >
-                    Cluster {shortId(meta.id)} — {meta.report_count} similar reports.
+                    {t(
+                      `Cluster ${shortId(meta.id)} — ${meta.report_count} similar reports.`,
+                      `Skupina ${shortId(meta.id)} — ${meta.report_count} podobných tipů.`,
+                    )}
                   </Text>
                   <View
                     style={{
@@ -139,10 +148,11 @@ export default function AdminCluster() {
                     }}
                   >
                     <Text style={{ fontFamily: FONT.bodyBold, fontSize: 12, color: HG.ink }}>
-                      <Text style={{ fontSize: 18 }}>{meta.report_count}</Text> victims
+                      <Text style={{ fontSize: 18 }}>{meta.report_count}</Text>{' '}
+                      {t('victims', 'obětí')}
                     </Text>
                     <Chip bg={HG.red} color={HG.cream} sm>
-                      ● Active
+                      {t('● Active', '● Aktivní')}
                     </Chip>
                   </View>
                 </View>

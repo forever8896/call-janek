@@ -1,14 +1,18 @@
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { Platform, KeyboardAvoidingView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Btn } from '@/components/atoms';
 import { Mascot } from '@/components/mascot';
 import { useAuth } from '@/lib/auth';
-import { BORDER, FONT, HG } from '@/theme/tokens';
+import { useLang, useT } from '@/lib/i18n';
+import { BORDER, FONT, HG, RADIUS } from '@/theme/tokens';
 
 export default function AdminSignIn() {
   const router = useRouter();
+  const t = useT();
+  const { lang, toggle } = useLang();
   const {
     role,
     isReady,
@@ -40,7 +44,7 @@ export default function AdminSignIn() {
   const onSubmit = async () => {
     setError(null);
     if (!email.trim() || password.length === 0) {
-      setError('Email and password required.');
+      setError(t('Email and password required.', 'Email a heslo povinné.'));
       return;
     }
     setSubmitting(true);
@@ -67,7 +71,7 @@ export default function AdminSignIn() {
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
           <Mascot kind="janek" size={56} />
-          <View>
+          <View style={{ flex: 1 }}>
             <Text
               style={{
                 fontFamily: FONT.displaySemiItalic,
@@ -85,9 +89,31 @@ export default function AdminSignIn() {
                 letterSpacing: 0.5,
               }}
             >
-              NEWSROOM
+              {t('NEWSROOM', 'REDAKCE')}
             </Text>
           </View>
+          <Pressable
+            onPress={toggle}
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 6,
+              backgroundColor: HG.butter,
+              borderWidth: BORDER.half,
+              borderColor: HG.ink,
+              borderRadius: RADIUS.pill,
+            }}
+          >
+            <Text
+              style={{
+                fontFamily: FONT.bodyBold,
+                fontSize: 11,
+                color: HG.ink,
+                letterSpacing: 0.5,
+              }}
+            >
+              {lang} ↔
+            </Text>
+          </Pressable>
         </View>
 
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -113,10 +139,13 @@ export default function AdminSignIn() {
               color: HG.inkMute,
               marginTop: 12,
               lineHeight: 21,
+              textAlign: 'center',
             }}
           >
-            Sign in once and we&apos;ll keep you in. Face ID will unlock the queue next
-            time you open the app.
+            {t(
+              'Sign in once and we’ll keep you in. Face ID will unlock the queue next time you open the app.',
+              'Přihlas se jednou a zůstaneš. Face ID otevře frontu při příštím spuštění.',
+            )}
           </Text>
         </View>
 
@@ -141,7 +170,7 @@ export default function AdminSignIn() {
                 marginBottom: 4,
               }}
             >
-              Email
+              {t('Email', 'Email')}
             </Text>
             <TextInput
               value={email}
@@ -181,7 +210,7 @@ export default function AdminSignIn() {
                 marginBottom: 4,
               }}
             >
-              Password
+              {t('Password', 'Heslo')}
             </Text>
             <TextInput
               value={password}
@@ -232,7 +261,10 @@ export default function AdminSignIn() {
                 )}
               </View>
               <Text style={{ fontFamily: FONT.bodySemi, fontSize: 13, color: HG.ink }}>
-                Unlock with Face ID / fingerprint next time
+                {t(
+                  'Unlock with Face ID / fingerprint next time',
+                  'Příště otevřít přes Face ID / otisk',
+                )}
               </Text>
             </Pressable>
           )}
@@ -257,7 +289,7 @@ export default function AdminSignIn() {
             color={HG.ink}
             onPress={onSubmit}
           >
-            {submitting ? 'Signing in…' : 'Sign in →'}
+            {submitting ? t('Signing in…', 'Přihlašuji…') : t('Sign in →', 'Přihlásit →')}
           </Btn>
         </View>
 
@@ -271,7 +303,7 @@ export default function AdminSignIn() {
             textAlign: 'center',
           }}
         >
-          ALL ACTIONS LOGGED · CZ HOSTED
+          {t('ALL ACTIONS LOGGED · CZ HOSTED', 'AKCE LOGOVÁNY · HOSTOVÁNO V ČR')}
         </Text>
       </View>
     </SafeAreaView>

@@ -5,6 +5,7 @@ import { supabase } from './supabase';
 import { ENV } from './env';
 import type {
   AdminQueueResponse,
+  AdminSearchResponse,
   AudioUploadResponse,
   ReportDetail,
   ReportListItem,
@@ -201,6 +202,14 @@ export async function addReportNote(
 
 export async function getQuarantine(): Promise<{ reports: ReportListItem[]; total: number }> {
   return request('/admin/quarantine', { admin: true });
+}
+
+export async function adminSearch(query: string): Promise<AdminSearchResponse> {
+  return request<AdminSearchResponse>('/admin/search', {
+    method: 'POST',
+    body: JSON.stringify({ query }),
+    admin: true,
+  });
 }
 
 export { ApiError };

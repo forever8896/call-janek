@@ -6,16 +6,10 @@ import { Btn, Chip } from '@/components/atoms';
 import { AdminHeader, SectionLabel } from '@/components/admin/Header';
 import { Mascot } from '@/components/mascot';
 import { useAuth } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
 import { shortId } from '@/lib/mapping';
 import { supabase } from '@/lib/supabase';
 import { BORDER, FONT, HG } from '@/theme/tokens';
-
-const PREFS: [string, string][] = [
-  ['Default sort', 'Urgency ↓'],
-  ['Auto-cluster threshold', '≥ 0.78 sim'],
-  ['Push notifications', 'CRIT only'],
-  ['Quiet hours', '00:00 → 06:00'],
-];
 
 type AuditRow = {
   id: string;
@@ -26,6 +20,13 @@ type AuditRow = {
 
 export default function AdminSettings() {
   const router = useRouter();
+  const t = useT();
+  const PREFS: [string, string][] = [
+    [t('Default sort', 'Výchozí řazení'), t('Urgency ↓', 'Naléhavost ↓')],
+    [t('Auto-cluster threshold', 'Práh seskupení'), '≥ 0.78 sim'],
+    [t('Push notifications', 'Notifikace'), t('CRIT only', 'Jen kritické')],
+    [t('Quiet hours', 'Tichý režim'), '00:00 → 06:00'],
+  ];
   const { session, signOut } = useAuth();
   const [log, setLog] = useState<AuditRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +57,11 @@ export default function AdminSettings() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: HG.sand }}>
       <View style={{ flex: 1, backgroundColor: HG.sand }}>
-        <AdminHeader title="Settings" subtitle="JANEK · ADMIN" onBack={() => router.back()} />
+        <AdminHeader
+          title={t('Settings', 'Nastavení')}
+          subtitle="JANEK · ADMIN"
+          onBack={() => router.back()}
+        />
 
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 14 }}>
           <View
@@ -85,18 +90,18 @@ export default function AdminSettings() {
                 }}
               >
                 {session?.user?.last_sign_in_at
-                  ? `LAST ${new Date(session.user.last_sign_in_at).toLocaleString('en', {
+                  ? `${t('LAST', 'NAPOSLEDY')} ${new Date(session.user.last_sign_in_at).toLocaleString(t('en', 'cs'), {
                       hour: '2-digit',
                       minute: '2-digit',
                       day: 'numeric',
                       month: 'short',
                     })}`
-                  : 'NOT SIGNED IN'}
+                  : t('NOT SIGNED IN', 'NEPŘIHLÁŠEN')}
               </Text>
             </View>
           </View>
 
-          <SectionLabel>Queue preferences</SectionLabel>
+          <SectionLabel>{t('Queue preferences', 'Nastavení fronty')}</SectionLabel>
           <View
             style={{
               backgroundColor: HG.card,
@@ -129,11 +134,11 @@ export default function AdminSettings() {
           <SectionLabel
             right={
               <Chip bg={HG.ink} color={HG.cream} sm>
-                EXPORT CSV
+                {t('EXPORT CSV', 'EXPORT CSV')}
               </Chip>
             }
           >
-            Audit log · recent
+            {t('Audit log · recent', 'Audit · poslední')}
           </SectionLabel>
           <View
             style={{
@@ -157,7 +162,7 @@ export default function AdminSettings() {
                   padding: 8,
                 }}
               >
-                No actions logged yet.
+                {t('No actions logged yet.', 'Zatím žádné akce.')}
               </Text>
             ) : (
               log.map((row, i) => {
@@ -213,7 +218,7 @@ export default function AdminSettings() {
 
           <View style={{ height: 16 }} />
           <Btn full onPress={onSignOut} bg={HG.card} color={HG.ink}>
-            Sign out
+            {t('Sign out', 'Odhlásit se')}
           </Btn>
         </ScrollView>
       </View>

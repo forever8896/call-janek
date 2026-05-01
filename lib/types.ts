@@ -20,5 +20,7 @@ export type {
   TranscribeResponse,
   UploadUrlResponse,
   AdminQueueResponse,
+  AdminSearchResponse,
+  SearchFilters,
   ApiError,
 } from '../worker/src/types/shared';

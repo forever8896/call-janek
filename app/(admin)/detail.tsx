@@ -7,16 +7,24 @@ import { Btn, Chip, Urgency } from '@/components/atoms';
 import { AdminHeader, HeaderIconBtn, SectionLabel } from '@/components/admin/Header';
 import { AudioPlayer } from '@/components/admin/AudioPlayer';
 import { ApiError, addReportNote, getAdminReport, patchAdminReport } from '@/lib/api';
+import { useT } from '@/lib/i18n';
 import { shortId } from '@/lib/mapping';
 import type { Category, ReportDetail, ReportNote } from '@/lib/types';
 import { BORDER, FONT, HG, hardShadow } from '@/theme/tokens';
 
-const CAT_LABEL: Record<Category, string> = {
+const CAT_LABEL_EN: Record<Category, string> = {
   taxi_scam: 'TAXI SCAM',
   fake_exchange: 'FAKE EXCHANGE',
   online_fraud: 'ONLINE FRAUD',
   restaurant_scam: 'RESTAURANT SCAM',
   other: 'OTHER',
+};
+const CAT_LABEL_CZ: Record<Category, string> = {
+  taxi_scam: 'TAXI PODVOD',
+  fake_exchange: 'FALEŠNÁ SMĚNÁRNA',
+  online_fraud: 'ONLINE PODVOD',
+  restaurant_scam: 'RESTAURACE',
+  other: 'JINÉ',
 };
 
 function urgencyBucket(score: number): 1 | 2 | 3 | 4 {
@@ -28,6 +36,8 @@ function urgencyBucket(score: number): 1 | 2 | 3 | 4 {
 
 export default function AdminDetail() {
   const router = useRouter();
+  const t = useT();
+  const CAT_LABEL = t('en', 'cz') === 'cz' ? CAT_LABEL_CZ : CAT_LABEL_EN;
   const { id } = useLocalSearchParams<{ id?: string }>();
   const [report, setReport] = useState<ReportDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,7 +99,7 @@ export default function AdminDetail() {
     <SafeAreaView style={{ flex: 1, backgroundColor: HG.sand }}>
       <View style={{ flex: 1, backgroundColor: HG.sand }}>
         <AdminHeader
-          title="Report"
+          title={t('Report', 'Tip')}
           subtitle={report ? shortId(report.id) : id ? shortId(id) : ''}
           onBack={() => router.back()}
           right={<HeaderIconBtn bg={HG.amberSoft}>★</HeaderIconBtn>}
@@ -108,7 +118,7 @@ export default function AdminDetail() {
         ) : !report ? (
           <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}>
             <Text style={{ fontFamily: FONT.displayItalic, fontSize: 16, color: HG.inkMute }}>
-              Report not found.
+              {t('Report not found.', 'Tip nenalezen.')}
             </Text>
           </View>
         ) : (
@@ -193,7 +203,9 @@ export default function AdminDetail() {
 
               {/* Original tip */}
               <SectionLabel>
-                {report.transcript ? 'Original tip · transcribed' : 'Original tip'}
+                {report.transcript
+                  ? t('Original tip · transcribed', 'Původní tip · přepsáno')
+                  : t('Original tip', 'Původní tip')}
               </SectionLabel>
               <View
                 style={{
@@ -275,7 +287,11 @@ export default function AdminDetail() {
                 <>
                   <SectionLabel
                     right={
-                      <Pressable onPress={() => router.push('/(admin)/cluster')}>
+                      <Pressable
+                        onPress={() =>
+                          router.push(`/(admin)/cluster?clusterId=${report.cluster?.id}`)
+                        }
+                      >
                         <Text
                           style={{
                             fontFamily: FONT.monoBold,
@@ -283,12 +299,12 @@ export default function AdminDetail() {
                             color: HG.redInk,
                           }}
                         >
-                          EXPAND →
+                          {t('EXPAND →', 'ROZBALIT →')}
                         </Text>
                       </Pressable>
                     }
                   >
-                    Cluster · {report.cluster.report_count} similar
+                    {t(`Cluster · ${report.cluster.report_count} similar`, `Skupina · ${report.cluster.report_count} podobných`)}
                   </SectionLabel>
                   <View
                     style={{
@@ -342,7 +358,12 @@ export default function AdminDetail() {
               {/* Evidence */}
               {report.evidence.length > 0 && (
                 <>
-                  <SectionLabel>Web research · AI · {report.evidence.length} sources</SectionLabel>
+                  <SectionLabel>
+                    {t(
+                      `Web research · AI · ${report.evidence.length} sources`,
+                      `Webový průzkum · AI · ${report.evidence.length} zdrojů`,
+                    )}
+                  </SectionLabel>
                   <View style={{ gap: 8 }}>
                     {report.evidence.map((e) => (
                       <View
@@ -414,7 +435,7 @@ export default function AdminDetail() {
 
               {/* Newsroom notes */}
               <SectionLabel>
-                Newsroom notes
+                {t('Newsroom notes', 'Poznámky')}
                 {report.notes.length > 0 ? ` · ${report.notes.length}` : ''}
               </SectionLabel>
               <View
@@ -436,7 +457,7 @@ export default function AdminDetail() {
                       color: HG.inkMute,
                     }}
                   >
-                    No notes yet — add the first one below.
+                    {t('No notes yet — add the first one below.', 'Zatím žádná poznámka — přidej první níže.')}
                   </Text>
                 )}
                 {report.notes.map((n) => (
@@ -504,7 +525,7 @@ export default function AdminDetail() {
                   <TextInput
                     value={noteDraft}
                     onChangeText={setNoteDraft}
-                    placeholder="Add a note (newsroom-only)"
+                    placeholder={t('Add a note (newsroom-only)', 'Přidat poznámku (interní)')}
                     placeholderTextColor={HG.inkMute}
                     multiline
                     style={{
@@ -542,7 +563,7 @@ export default function AdminDetail() {
                         color: HG.ink,
                       }}
                     >
-                      {postingNote ? '…' : 'Add'}
+                      {postingNote ? '…' : t('Add', 'Přidat')}
                     </Text>
                   </Pressable>
                 </View>
@@ -551,7 +572,7 @@ export default function AdminDetail() {
               {/* Pipeline runs */}
               {report.pipeline_runs.length > 0 && (
                 <>
-                  <SectionLabel>Pipeline · audit</SectionLabel>
+                  <SectionLabel>{t('Pipeline · audit', 'Pipeline · audit')}</SectionLabel>
                   <View
                     style={{
                       backgroundColor: HG.card,
@@ -621,7 +642,7 @@ export default function AdminDetail() {
                     color={HG.ink}
                     onPress={() => onAction('archived')}
                   >
-                    {acting ? '…' : '✓ Reviewed'}
+                    {acting ? '…' : t('✓ Reviewed', '✓ Vyřízeno')}
                   </Btn>
                   <Btn
                     full
@@ -630,7 +651,7 @@ export default function AdminDetail() {
                     color={HG.cream}
                     onPress={() => onAction('actioned')}
                   >
-                    {acting ? '…' : '🔥 Actioned'}
+                    {acting ? '…' : t('🔥 Actioned', '🔥 Pronásleduji')}
                   </Btn>
                 </>
               ) : (
@@ -641,7 +662,14 @@ export default function AdminDetail() {
                   color={HG.ink}
                   onPress={() => onAction('ready')}
                 >
-                  {acting ? '…' : `↺ Re-open (was ${report.status})`}
+                  {acting
+                    ? '…'
+                    : t(
+                        `↺ Re-open (was ${report.status})`,
+                        `↺ Znovu otevřít (bylo ${
+                          report.status === 'actioned' ? 'řešeno' : 'archivováno'
+                        })`,
+                      )}
                 </Btn>
               )}
             </View>

@@ -134,6 +134,23 @@ export interface AudioUploadResponse {
   audio_path: string
 }
 
+export interface SearchFilters {
+  since?: string | null
+  until?: string | null
+  category?: Category | null
+  status?: ReportStatus | null
+  min_urgency_score?: number | null
+  text_match?: string | null
+  only_clusters?: boolean | null
+}
+
+export interface AdminSearchResponse {
+  summary: string
+  filters: SearchFilters
+  reports: ReportListItem[]
+  total: number
+}
+
 export interface UploadUrlResponse {
   upload_url: string
   storage_path: string
