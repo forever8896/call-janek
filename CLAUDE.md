@@ -102,11 +102,10 @@ If MCP tools aren't showing up, restart Claude Code in this directory so it re-r
 3. Renamed `expo-rubes-scaffold` → `expo-rubes` in `package.json` + `app.json` (name/slug/scheme).
 4. Registered Expo MCP at project scope: `claude mcp add expo --scope project -- bunx -y expo-mcp@latest`
 5. `eas login` (as `kiliansolutions`)
-6. `bun install` — **status: not yet successful, needs re-run.**
+6. `bun install` — 858 packages installed, `bun.lock` generated.
 
 ## Next setup steps (when ready)
 
-- Re-run `bun install` (the first attempt got interrupted; no `node_modules` / `bun.lock` yet).
 - `eas build:configure` to generate `eas.json`.
 - First development build: `eas build --profile development --platform android` (or `ios`).
 - After build installs on a device: `bun expo start --dev-client`.
