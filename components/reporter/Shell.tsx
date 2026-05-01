@@ -1,8 +1,9 @@
 import React from 'react';
 import { Pressable, Text, View, ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Mascot } from '@/components/mascot';
 import { useLang } from '@/lib/i18n';
-import { BORDER, FONT, HG, RADIUS, hardShadow } from '@/theme/tokens';
+import { BORDER, FONT, HG, RADIUS } from '@/theme/tokens';
 
 export function ReporterShell({
   children,
@@ -33,31 +34,7 @@ export function ReporterTopBar({ title }: { title?: string }) {
         gap: 8,
       }}
     >
-      <View
-        style={[
-          {
-            width: 38,
-            height: 38,
-            borderRadius: RADIUS.sm,
-            backgroundColor: HG.red,
-            borderWidth: BORDER.full,
-            borderColor: HG.ink,
-            alignItems: 'center',
-            justifyContent: 'center',
-          },
-          hardShadow(2),
-        ]}
-      >
-        <Text
-          style={{
-            color: HG.cream,
-            fontFamily: FONT.displaySemi,
-            fontSize: 18,
-          }}
-        >
-          HG
-        </Text>
-      </View>
+      <Mascot kind="trdelnik_soyboy" size={44} />
       <View style={{ flex: 1 }}>
         <Text
           style={{
