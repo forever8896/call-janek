@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { JanekAvatar } from '@/components/illustrations';
+import { Mascot } from '@/components/mascot';
 import { useLang } from '@/lib/i18n';
 import { BORDER, FONT, HG, RADIUS, hardShadow } from '@/theme/tokens';
 
@@ -51,8 +51,8 @@ export function AdminHeader({
           <Text style={{ fontFamily: FONT.bodyBold, fontSize: 15, color: HG.ink }}>←</Text>
         </Pressable>
       )}
-      {/* Janek lives in the top-left of every newsroom screen */}
-      <JanekAvatar size={36} />
+      {/* Janek (painted mascot) lives in the top-left of every newsroom screen */}
+      <Mascot kind="janek" size={42} />
       <View style={{ flex: 1 }}>
         <Text
           style={{
