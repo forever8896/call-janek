@@ -19,9 +19,8 @@ export default function Splash() {
           paddingBottom: 24,
         }}
       >
-        {/* Hero illustration — skyline rendered 4x but bottom-clipped so the
-            empty cream top of the source falls off and the hero stays compact. */}
-        <View style={{ position: 'relative', height: 260, marginTop: 8, overflow: 'hidden' }}>
+        {/* Skyline (4x scale, bottom-clipped so empty cream top falls off) */}
+        <View style={{ position: 'relative', height: 220, marginTop: 8, overflow: 'hidden' }}>
           <View
             style={{
               position: 'absolute',
@@ -34,33 +33,20 @@ export default function Splash() {
           >
             <PragueScroll height={440} opacity={0.55} speedPxPerSec={28} />
           </View>
-          <View
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: -16,
-            }}
-          >
-            <Mascot kind="trdelnik_mogger" size={150} bobble rotate={-8} delay={0} />
-          </View>
-          <View
-            style={{
-              position: 'absolute',
-              top: 50,
-              right: -10,
-            }}
-          >
-            <Mascot kind="exchange_scammer" size={140} bobble rotate={6} delay={400} />
-          </View>
-          <View
-            style={{
-              position: 'absolute',
-              top: 80,
-              left: 90,
-            }}
-          >
-            <Mascot kind="angry_sunka" size={110} bobble rotate={-3} delay={800} />
-          </View>
+        </View>
+
+        {/* Characters live below the skyline */}
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'center',
+            alignItems: 'center',
+            marginTop: 8,
+            gap: -12,
+          }}
+        >
+          <Mascot kind="trdelnik_mogger" size={140} bobble rotate={-6} delay={0} />
+          <Mascot kind="angry_sunka" size={130} bobble rotate={5} delay={500} />
         </View>
 
         <Text
