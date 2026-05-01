@@ -19,14 +19,17 @@ export default function Splash() {
           paddingBottom: 24,
         }}
       >
-        {/* Hero illustration */}
-        <View style={{ position: 'relative', height: 380, marginTop: 8 }}>
+        {/* Hero illustration — skyline rendered 4x but bottom-clipped so the
+            empty cream top of the source falls off and the hero stays compact. */}
+        <View style={{ position: 'relative', height: 260, marginTop: 8, overflow: 'hidden' }}>
           <View
             style={{
               position: 'absolute',
               bottom: 0,
               left: -24,
               right: -24,
+              height: 440,
+              justifyContent: 'flex-end',
             }}
           >
             <PragueScroll height={440} opacity={0.55} speedPxPerSec={28} />
@@ -34,7 +37,7 @@ export default function Splash() {
           <View
             style={{
               position: 'absolute',
-              top: 20,
+              top: 0,
               left: -16,
             }}
           >
@@ -43,7 +46,7 @@ export default function Splash() {
           <View
             style={{
               position: 'absolute',
-              top: 70,
+              top: 50,
               right: -10,
             }}
           >
@@ -52,7 +55,7 @@ export default function Splash() {
           <View
             style={{
               position: 'absolute',
-              top: 100,
+              top: 80,
               left: 90,
             }}
           >
