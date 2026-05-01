@@ -48,6 +48,8 @@ export default function AdminQueue() {
     { label: t('Archived', 'Archiv'), value: 'archived' },
   ];
   const [tab, setTab] = useState<StatusTab>('ready');
+  const [sort, setSort] = useState<'urgency' | 'time'>('urgency');
+  const [spamMode, setSpamMode] = useState(false);
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -65,7 +67,11 @@ export default function AdminQueue() {
   const load = useCallback(async () => {
     if (role !== 'admin') return;
     try {
-      const res = await getAdminQueue({ status: tab, limit: 50 });
+      const res = await getAdminQueue({
+        status: spamMode ? 'spam' : tab,
+        sort,
+        limit: 50,
+      });
       // Smooth reorder/insert/remove transitions when the list shape changes.
       LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
       setReports(res.reports);
@@ -78,7 +84,7 @@ export default function AdminQueue() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [tab, role]);
+  }, [tab, sort, spamMode, role]);
 
   // Redirect non-admins to sign in
   useEffect(() => {
@@ -143,7 +149,11 @@ export default function AdminQueue() {
       <View style={{ flex: 1, backgroundColor: HG.sand }}>
         <AdminHeader
           title={t('Queue', 'Fronta')}
-          subtitle={`${total} ${t(tab.toUpperCase(), tabLabelCz(tab))} · ${reports.length} ${t('SHOWN', 'ZOBRAZENO')}`}
+          subtitle={`${total} ${
+            spamMode
+              ? t('SPAM', 'SPAM')
+              : t(tab.toUpperCase(), tabLabelCz(tab))
+          } · ${reports.length} ${t('SHOWN', 'ZOBRAZENO')}`}
           right={
             <View style={{ flexDirection: 'row', gap: 6 }}>
               <HeaderIconBtn onPress={() => router.push('/(admin)/search')}>⌕</HeaderIconBtn>
@@ -249,42 +259,94 @@ export default function AdminQueue() {
             justifyContent: 'space-between',
           }}
         >
-          <Text
+          {/* Sort toggle: Naléhavost / Čas */}
+          <View
             style={{
-              fontFamily: FONT.monoBold,
-              fontSize: 10,
-              color: HG.inkDim,
-              letterSpacing: 0.4,
+              flexDirection: 'row',
+              gap: 4,
+              backgroundColor: HG.card,
+              borderWidth: BORDER.half,
+              borderColor: HG.ink,
+              borderRadius: 999,
+              padding: 2,
             }}
           >
-            {t('SORTED · URGENCY ↓', 'ŘAZENO · NALÉHAVOST ↓')}
-          </Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Animated.View
-              style={{
-                width: 7,
-                height: 7,
-                borderRadius: 999,
-                backgroundColor: HG.red,
-                opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 1] }),
-                transform: [
-                  {
-                    scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.5] }),
-                  },
-                ],
-              }}
-            />
+            {(['urgency', 'time'] as const).map((s) => {
+              const active = sort === s;
+              const label =
+                s === 'urgency'
+                  ? t('Naléhavost ↓', 'Naléhavost ↓')
+                  : t('Time ↓', 'Čas ↓');
+              return (
+                <Pressable
+                  key={s}
+                  onPress={() => setSort(s)}
+                  hitSlop={4}
+                  style={{
+                    paddingHorizontal: 10,
+                    paddingVertical: 4,
+                    borderRadius: 999,
+                    backgroundColor: active ? HG.ink : 'transparent',
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontFamily: FONT.bodyBold,
+                      fontSize: 11,
+                      color: active ? HG.cream : HG.ink,
+                      letterSpacing: 0.2,
+                    }}
+                  >
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          {/* Spam toggle */}
+          <Pressable
+            onPress={() => setSpamMode((v) => !v)}
+            hitSlop={6}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 6,
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 999,
+              borderWidth: BORDER.half,
+              borderColor: HG.ink,
+              backgroundColor: spamMode ? HG.red : 'transparent',
+            }}
+          >
+            {!spamMode && (
+              <Animated.View
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: 999,
+                  backgroundColor: HG.red,
+                  opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 1] }),
+                  transform: [
+                    {
+                      scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.5] }),
+                    },
+                  ],
+                }}
+              />
+            )}
             <Text
               style={{
-                fontFamily: FONT.monoBold,
+                fontFamily: FONT.bodyBold,
                 fontSize: 10,
-                color: HG.inkDim,
-                letterSpacing: 0.4,
+                color: spamMode ? HG.cream : HG.ink,
+                letterSpacing: 0.6,
               }}
             >
-              {t('LIVE', 'ŽIVĚ')}
+              {t('SPAM', 'SPAM')}
             </Text>
-          </View>
+          </Pressable>
         </View>
 
         <ScrollView

@@ -161,13 +161,15 @@ export async function uploadAttachment(opts: {
 // ─── Admin (JWT required) ───────────────────────────────────
 export async function getAdminQueue(opts: {
   category?: Category;
-  status?: 'ready' | 'actioned' | 'archived';
+  status?: 'ready' | 'actioned' | 'archived' | 'spam' | 'quarantine';
+  sort?: 'urgency' | 'time';
   page?: number;
   limit?: number;
 } = {}): Promise<AdminQueueResponse> {
   const qs = new URLSearchParams();
   if (opts.category) qs.set('category', opts.category);
   if (opts.status) qs.set('status', opts.status);
+  if (opts.sort) qs.set('sort', opts.sort);
   if (opts.page) qs.set('page', String(opts.page));
   if (opts.limit) qs.set('limit', String(opts.limit));
   const path = qs.toString() ? `/admin/reports?${qs}` : '/admin/reports';

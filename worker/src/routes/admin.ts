@@ -16,11 +16,14 @@ adminRouter.use('*', requireAdmin)
 adminRouter.get('/reports', async (c) => {
   const category = c.req.query('category')
   const statusParam = c.req.query('status') ?? 'ready'
-  const allowedStatuses = ['ready', 'actioned', 'archived'] as const
+  const allowedStatuses = ['ready', 'actioned', 'archived', 'spam', 'quarantine'] as const
   type AllowedStatus = (typeof allowedStatuses)[number]
   const status: AllowedStatus = (allowedStatuses as readonly string[]).includes(statusParam)
     ? (statusParam as AllowedStatus)
     : 'ready'
+
+  const sortParam = c.req.query('sort') ?? 'urgency'
+  const sort: 'urgency' | 'time' = sortParam === 'time' ? 'time' : 'urgency'
 
   const page = Math.max(1, Number(c.req.query('page') ?? 1))
   const limit = Math.min(50, Math.max(1, Number(c.req.query('limit') ?? 20)))
@@ -37,9 +40,15 @@ adminRouter.get('/reports', async (c) => {
       { count: 'exact' }
     )
     .eq('status', status)
-    .order('urgency_score', { ascending: false })
-    .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
+
+  if (sort === 'time') {
+    query = query.order('created_at', { ascending: false })
+  } else {
+    query = query
+      .order('urgency_score', { ascending: false })
+      .order('created_at', { ascending: false })
+  }
 
   if (category) query = query.eq('category', category as 'taxi_scam' | 'fake_exchange' | 'online_fraud' | 'restaurant_scam' | 'other')
 
