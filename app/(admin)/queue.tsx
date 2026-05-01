@@ -16,22 +16,21 @@ import { getAdminQueue, ApiError } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { toUIRow } from '@/lib/mapping';
 import { supabase } from '@/lib/supabase';
-import type { Category, ReportListItem } from '@/lib/types';
+import type { ReportListItem } from '@/lib/types';
 import { BORDER, FONT, HG, hardShadow } from '@/theme/tokens';
 
-const FILTERS: { label: string; cat: Category | null }[] = [
-  { label: 'All', cat: null },
-  { label: 'Taxi', cat: 'taxi_scam' },
-  { label: 'Exchange', cat: 'fake_exchange' },
-  { label: 'Restaurant', cat: 'restaurant_scam' },
-  { label: 'Online', cat: 'online_fraud' },
-  { label: 'Other', cat: 'other' },
+type StatusTab = 'ready' | 'actioned' | 'archived';
+
+const TABS: { label: string; value: StatusTab }[] = [
+  { label: 'Open', value: 'ready' },
+  { label: 'Actioned', value: 'actioned' },
+  { label: 'Archived', value: 'archived' },
 ];
 
 export default function AdminQueue() {
   const router = useRouter();
   const { role, isReady } = useAuth();
-  const [filter, setFilter] = useState<Category | null>(null);
+  const [tab, setTab] = useState<StatusTab>('ready');
   const [reports, setReports] = useState<ReportListItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -41,7 +40,7 @@ export default function AdminQueue() {
   const load = useCallback(async () => {
     if (role !== 'admin') return;
     try {
-      const res = await getAdminQueue({ category: filter ?? undefined, limit: 50 });
+      const res = await getAdminQueue({ status: tab, limit: 50 });
       setReports(res.reports);
       setTotal(res.total);
       setError(null);
@@ -52,7 +51,7 @@ export default function AdminQueue() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filter, role]);
+  }, [tab, role]);
 
   // Redirect non-admins to sign in
   useEffect(() => {
@@ -106,7 +105,7 @@ export default function AdminQueue() {
       <View style={{ flex: 1, backgroundColor: HG.sand }}>
         <AdminHeader
           title="Queue"
-          subtitle={`${total} READY · ${reports.length} SHOWN`}
+          subtitle={`${total} ${tab.toUpperCase()} · ${reports.length} SHOWN`}
           right={
             <View style={{ flexDirection: 'row', gap: 6 }}>
               <HeaderIconBtn onPress={() => router.push('/(admin)/search')}>⌕</HeaderIconBtn>
@@ -162,26 +161,29 @@ export default function AdminQueue() {
           </View>
         </View>
 
-        {/* Filters */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12, gap: 6 }}
-          style={{ flexGrow: 0 }}
+        {/* Status tabs */}
+        <View
+          style={{
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            flexDirection: 'row',
+            gap: 6,
+          }}
         >
-          {FILTERS.map(({ label, cat }) => {
-            const active = filter === cat;
+          {TABS.map(({ label, value }) => {
+            const active = tab === value;
             return (
               <Pressable
-                key={label}
-                onPress={() => setFilter(cat)}
+                key={value}
+                onPress={() => setTab(value)}
                 style={{
-                  paddingHorizontal: 12,
-                  paddingVertical: 7,
+                  flex: 1,
+                  paddingVertical: 9,
                   borderWidth: BORDER.half,
                   borderColor: HG.ink,
                   borderRadius: 999,
                   backgroundColor: active ? HG.ink : 'transparent',
+                  alignItems: 'center',
                 }}
               >
                 <Text
@@ -196,7 +198,7 @@ export default function AdminQueue() {
               </Pressable>
             );
           })}
-        </ScrollView>
+        </View>
 
         <View
           style={{

@@ -1,14 +1,14 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { Btn, Chip, Urgency } from '@/components/atoms';
 import { AdminHeader, HeaderIconBtn, SectionLabel } from '@/components/admin/Header';
 import { AudioPlayer } from '@/components/admin/AudioPlayer';
-import { ApiError, getAdminReport, patchAdminReport } from '@/lib/api';
+import { ApiError, addReportNote, getAdminReport, patchAdminReport } from '@/lib/api';
 import { shortId } from '@/lib/mapping';
-import type { Category, ReportDetail } from '@/lib/types';
+import type { Category, ReportDetail, ReportNote } from '@/lib/types';
 import { BORDER, FONT, HG, hardShadow } from '@/theme/tokens';
 
 const CAT_LABEL: Record<Category, string> = {
@@ -33,6 +33,8 @@ export default function AdminDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState(false);
+  const [noteDraft, setNoteDraft] = useState('');
+  const [postingNote, setPostingNote] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -52,7 +54,7 @@ export default function AdminDetail() {
     load();
   }, [load]);
 
-  const onAction = async (status: 'actioned' | 'archived') => {
+  const onAction = async (status: 'actioned' | 'archived' | 'ready') => {
     if (!id) return;
     setActing(true);
     try {
@@ -62,6 +64,24 @@ export default function AdminDetail() {
       setError(e instanceof ApiError ? e.message : String(e));
     } finally {
       setActing(false);
+    }
+  };
+
+  const onAddNote = async () => {
+    if (!id) return;
+    const body = noteDraft.trim();
+    if (!body) return;
+    setPostingNote(true);
+    try {
+      const note = await addReportNote(id, body);
+      setReport((prev) =>
+        prev ? { ...prev, notes: [...prev.notes, note as ReportNote] } : prev,
+      );
+      setNoteDraft('');
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setPostingNote(false);
     }
   };
 
@@ -392,6 +412,142 @@ export default function AdminDetail() {
                 </>
               )}
 
+              {/* Newsroom notes */}
+              <SectionLabel>
+                Newsroom notes
+                {report.notes.length > 0 ? ` · ${report.notes.length}` : ''}
+              </SectionLabel>
+              <View
+                style={{
+                  backgroundColor: HG.card,
+                  borderWidth: BORDER.half,
+                  borderColor: HG.rule,
+                  borderRadius: 14,
+                  padding: 12,
+                  gap: 10,
+                }}
+              >
+                {report.notes.length === 0 && (
+                  <Text
+                    style={{
+                      fontFamily: FONT.body,
+                      fontSize: 12,
+                      fontStyle: 'italic',
+                      color: HG.inkMute,
+                    }}
+                  >
+                    No notes yet — add the first one below.
+                  </Text>
+                )}
+                {report.notes.map((n) => (
+                  <View
+                    key={n.id}
+                    style={{
+                      paddingVertical: 6,
+                      borderTopWidth: 1,
+                      borderColor: HG.rule,
+                      borderStyle: 'dashed',
+                    }}
+                  >
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 2,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontFamily: FONT.monoBold,
+                          fontSize: 9,
+                          color: HG.inkMute,
+                        }}
+                      >
+                        {n.author ?? 'admin'}
+                      </Text>
+                      <Text
+                        style={{
+                          fontFamily: FONT.monoBold,
+                          fontSize: 9,
+                          color: HG.inkDim,
+                        }}
+                      >
+                        {new Date(n.created_at).toLocaleString('en', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                    </View>
+                    <Text
+                      style={{
+                        fontFamily: FONT.bodySemi,
+                        fontSize: 13,
+                        color: HG.ink,
+                        lineHeight: 18,
+                      }}
+                    >
+                      {n.body}
+                    </Text>
+                  </View>
+                ))}
+
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    gap: 8,
+                    marginTop: 4,
+                  }}
+                >
+                  <TextInput
+                    value={noteDraft}
+                    onChangeText={setNoteDraft}
+                    placeholder="Add a note (newsroom-only)"
+                    placeholderTextColor={HG.inkMute}
+                    multiline
+                    style={{
+                      flex: 1,
+                      fontFamily: FONT.bodySemi,
+                      fontSize: 13,
+                      color: HG.ink,
+                      paddingVertical: 8,
+                      paddingHorizontal: 10,
+                      backgroundColor: HG.cream,
+                      borderWidth: BORDER.half,
+                      borderColor: HG.ink,
+                      borderRadius: 10,
+                      minHeight: 36,
+                    }}
+                    editable={!postingNote}
+                  />
+                  <Pressable
+                    onPress={onAddNote}
+                    disabled={!noteDraft.trim() || postingNote}
+                    style={{
+                      paddingHorizontal: 12,
+                      paddingVertical: 9,
+                      backgroundColor:
+                        !noteDraft.trim() || postingNote ? HG.inkDim : HG.amberSoft,
+                      borderWidth: BORDER.half,
+                      borderColor: HG.ink,
+                      borderRadius: 10,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontFamily: FONT.bodyBold,
+                        fontSize: 12,
+                        color: HG.ink,
+                      }}
+                    >
+                      {postingNote ? '…' : 'Add'}
+                    </Text>
+                  </Pressable>
+                </View>
+              </View>
+
               {/* Pipeline runs */}
               {report.pipeline_runs.length > 0 && (
                 <>
@@ -456,24 +612,38 @@ export default function AdminDetail() {
                 borderColor: HG.rule,
               }}
             >
-              <Btn
-                full
-                sm
-                bg={HG.card}
-                color={HG.ink}
-                onPress={() => onAction('archived')}
-              >
-                {acting ? '…' : '✓ Reviewed'}
-              </Btn>
-              <Btn
-                full
-                sm
-                bg={HG.red}
-                color={HG.cream}
-                onPress={() => onAction('actioned')}
-              >
-                {acting ? '…' : '🔥 Actioned'}
-              </Btn>
+              {report.status === 'ready' ? (
+                <>
+                  <Btn
+                    full
+                    sm
+                    bg={HG.card}
+                    color={HG.ink}
+                    onPress={() => onAction('archived')}
+                  >
+                    {acting ? '…' : '✓ Reviewed'}
+                  </Btn>
+                  <Btn
+                    full
+                    sm
+                    bg={HG.red}
+                    color={HG.cream}
+                    onPress={() => onAction('actioned')}
+                  >
+                    {acting ? '…' : '🔥 Actioned'}
+                  </Btn>
+                </>
+              ) : (
+                <Btn
+                  full
+                  sm
+                  bg={HG.amberSoft}
+                  color={HG.ink}
+                  onPress={() => onAction('ready')}
+                >
+                  {acting ? '…' : `↺ Re-open (was ${report.status})`}
+                </Btn>
+              )}
             </View>
           </>
         )}

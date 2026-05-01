@@ -14,6 +14,13 @@ adminRouter.use('*', requireAdmin)
 // ─── GET /admin/reports ────────────────────────────────────────────────────────
 adminRouter.get('/reports', async (c) => {
   const category = c.req.query('category')
+  const statusParam = c.req.query('status') ?? 'ready'
+  const allowedStatuses = ['ready', 'actioned', 'archived'] as const
+  type AllowedStatus = (typeof allowedStatuses)[number]
+  const status: AllowedStatus = (allowedStatuses as readonly string[]).includes(statusParam)
+    ? (statusParam as AllowedStatus)
+    : 'ready'
+
   const page = Math.max(1, Number(c.req.query('page') ?? 1))
   const limit = Math.min(50, Math.max(1, Number(c.req.query('limit') ?? 20)))
   const offset = (page - 1) * limit
@@ -24,11 +31,13 @@ adminRouter.get('/reports', async (c) => {
       `id, created_at, text_description, category, urgency_score, urgency_reason,
        cluster_id, entities,
        report_media(id),
-       evidence(id)`,
+       evidence(id),
+       cluster:report_clusters!cluster_id ( report_count )`,
       { count: 'exact' }
     )
-    .eq('status', 'ready')
+    .eq('status', status)
     .order('urgency_score', { ascending: false })
+    .order('created_at', { ascending: false })
     .range(offset, offset + limit - 1)
 
   if (category) query = query.eq('category', category as 'taxi_scam' | 'fake_exchange' | 'online_fraud' | 'restaurant_scam' | 'other')
@@ -40,19 +49,25 @@ adminRouter.get('/reports', async (c) => {
     return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch reports' } }, 500)
   }
 
-  const reports: ReportListItem[] = (data ?? []).map((r) => ({
-    id:            r.id,
-    created_at:    r.created_at,
-    text_description: (r.text_description ?? '').slice(0, 200),
-    category:      r.category as ReportListItem['category'],
-    urgency_score: r.urgency_score ?? 0,
-    urgency_reason: r.urgency_reason ?? '',
-    cluster_id:    r.cluster_id,
-    cluster_count: null,
-    entity_count:  Array.isArray(r.entities) ? r.entities.length : 0,
-    evidence_count: Array.isArray(r.evidence) ? r.evidence.length : 0,
-    has_media:     Array.isArray(r.report_media) && r.report_media.length > 0,
-  }))
+  const reports: ReportListItem[] = (data ?? []).map((r) => {
+    const clusterRel = r.cluster as { report_count: number } | { report_count: number }[] | null
+    const cluster_count = Array.isArray(clusterRel)
+      ? clusterRel[0]?.report_count ?? null
+      : clusterRel?.report_count ?? null
+    return {
+      id:            r.id,
+      created_at:    r.created_at,
+      text_description: (r.text_description ?? '').slice(0, 200),
+      category:      r.category as ReportListItem['category'],
+      urgency_score: r.urgency_score ?? 0,
+      urgency_reason: r.urgency_reason ?? '',
+      cluster_id:    r.cluster_id,
+      cluster_count,
+      entity_count:  Array.isArray(r.entities) ? r.entities.length : 0,
+      evidence_count: Array.isArray(r.evidence) ? r.evidence.length : 0,
+      has_media:     Array.isArray(r.report_media) && r.report_media.length > 0,
+    }
+  })
 
   const total = count ?? 0
   return c.json({ reports, total, page, pages: Math.ceil(total / limit) })
@@ -62,7 +77,13 @@ adminRouter.get('/reports', async (c) => {
 adminRouter.get('/reports/:id', async (c) => {
   const id = c.req.param('id')
 
-  const [{ data: report }, { data: media }, { data: evidence }, { data: runs }] = await Promise.all([
+  const [
+    { data: report },
+    { data: media },
+    { data: evidence },
+    { data: runs },
+    { data: notes },
+  ] = await Promise.all([
     supabase
       .from('reports')
       .select('*')
@@ -82,6 +103,11 @@ adminRouter.get('/reports/:id', async (c) => {
       .select('step, status, attempts, started_at, finished_at, error')
       .eq('report_id', id)
       .order('started_at'),
+    supabase
+      .from('report_notes')
+      .select('id, body, created_at, user_id')
+      .eq('report_id', id)
+      .order('created_at', { ascending: true }),
   ])
 
   if (!report) {
@@ -150,9 +176,22 @@ adminRouter.get('/reports/:id', async (c) => {
     }),
   )
 
+  // Hydrate note authors with user emails (may be null if user was deleted)
+  const noteUserIds = Array.from(
+    new Set((notes ?? []).map((n) => n.user_id).filter((u): u is string => !!u)),
+  )
+  const userEmailMap = new Map<string, string>()
+  if (noteUserIds.length) {
+    const { data: { users } } = await supabase.auth.admin.listUsers({ perPage: 200 })
+    for (const u of users ?? []) {
+      if (noteUserIds.includes(u.id) && u.email) userEmailMap.set(u.id, u.email)
+    }
+  }
+
   return c.json({
     id:               report.id,
     created_at:       report.created_at,
+    status:           report.status,
     text_description: report.text_description ?? '',
     transcript:       report.transcript,
     location:         report.location,
@@ -164,14 +203,21 @@ adminRouter.get('/reports/:id', async (c) => {
     entities:         (report.entities as never) ?? [],
     media:            mediaWithUrls,
     evidence:         evidence ?? [],
+    notes:            (notes ?? []).map((n) => ({
+      id:         n.id,
+      body:       n.body,
+      created_at: n.created_at,
+      author:     n.user_id ? userEmailMap.get(n.user_id) ?? null : null,
+    })),
     cluster,
     pipeline_runs:    runs ?? [],
   })
 })
 
 // ─── PATCH /admin/reports/:id ──────────────────────────────────────────────────
+// Move between terminal states, or re-open back to `ready`.
 const patchSchema = z.object({
-  status: z.enum(['actioned', 'archived']),
+  status: z.enum(['actioned', 'archived', 'ready']),
 })
 
 adminRouter.patch('/reports/:id', zValidator('json', patchSchema), async (c) => {
@@ -190,11 +236,46 @@ adminRouter.patch('/reports/:id', zValidator('json', patchSchema), async (c) => 
 
   await supabase.from('audit_log').insert({
     user_id:   c.get('user').id,
-    action:    `report.${status}`,
+    action:    status === 'ready' ? 'report.reopened' : `report.${status}`,
     target_id: id,
   })
 
   return c.json({ id, status })
+})
+
+// ─── POST /admin/reports/:id/notes ────────────────────────────────────────────
+const noteSchema = z.object({
+  body: z.string().min(1).max(5000),
+})
+
+adminRouter.post('/reports/:id/notes', zValidator('json', noteSchema), async (c) => {
+  const id = c.req.param('id')
+  const user = c.get('user')
+  const { body } = c.req.valid('json')
+
+  const { data, error } = await supabase
+    .from('report_notes')
+    .insert({ report_id: id, user_id: user.id, body })
+    .select('id, body, created_at, user_id')
+    .single()
+
+  if (error || !data) {
+    logger.error({ error }, 'failed to insert note')
+    return c.json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to add note' } }, 500)
+  }
+
+  await supabase.from('audit_log').insert({
+    user_id:   user.id,
+    action:    'report.note_added',
+    target_id: id,
+  })
+
+  return c.json({
+    id:         data.id,
+    body:       data.body,
+    created_at: data.created_at,
+    author:     user.email ?? null,
+  })
 })
 
 // ─── GET /admin/quarantine ────────────────────────────────────────────────────

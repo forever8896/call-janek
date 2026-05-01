@@ -71,9 +71,17 @@ export interface ReportListItem {
   has_media: boolean
 }
 
+export interface ReportNote {
+  id: string
+  created_at: string
+  body: string
+  author: string | null   // email or display name when available
+}
+
 export interface ReportDetail {
   id: string
   created_at: string
+  status: ReportStatus
   text_description: string
   transcript: string | null
   location: string | null
@@ -85,6 +93,7 @@ export interface ReportDetail {
   entities: Entity[]
   media: MediaItem[]
   evidence: EvidenceItem[]
+  notes: ReportNote[]
   cluster: {
     id: string
     canonical_report_id: string

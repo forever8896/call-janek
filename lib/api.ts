@@ -160,11 +160,13 @@ export async function uploadAttachment(opts: {
 // ─── Admin (JWT required) ───────────────────────────────────
 export async function getAdminQueue(opts: {
   category?: Category;
+  status?: 'ready' | 'actioned' | 'archived';
   page?: number;
   limit?: number;
 } = {}): Promise<AdminQueueResponse> {
   const qs = new URLSearchParams();
   if (opts.category) qs.set('category', opts.category);
+  if (opts.status) qs.set('status', opts.status);
   if (opts.page) qs.set('page', String(opts.page));
   if (opts.limit) qs.set('limit', String(opts.limit));
   const path = qs.toString() ? `/admin/reports?${qs}` : '/admin/reports';
@@ -177,11 +179,22 @@ export async function getAdminReport(id: string): Promise<ReportDetail> {
 
 export async function patchAdminReport(
   id: string,
-  status: 'actioned' | 'archived',
+  status: 'actioned' | 'archived' | 'ready',
 ): Promise<{ id: string; status: string }> {
   return request(`/admin/reports/${id}`, {
     method: 'PATCH',
     body: JSON.stringify({ status }),
+    admin: true,
+  });
+}
+
+export async function addReportNote(
+  id: string,
+  body: string,
+): Promise<{ id: string; body: string; created_at: string; author: string | null }> {
+  return request(`/admin/reports/${id}/notes`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
     admin: true,
   });
 }

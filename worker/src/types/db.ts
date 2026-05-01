@@ -211,6 +211,32 @@ export interface Database {
         Update: { id?: string; label_cs?: string; label_en?: string }
         Relationships: []
       }
+      report_notes: {
+        Row: {
+          id: string
+          report_id: string
+          user_id: string | null
+          body: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          report_id: string
+          user_id?: string | null
+          body: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          report_id?: string
+          user_id?: string | null
+          body?: string
+          created_at?: string
+        }
+        Relationships: [
+          { foreignKeyName: 'report_notes_report_id_fkey'; columns: ['report_id']; referencedRelation: 'reports'; referencedColumns: ['id'] }
+        ]
+      }
       audit_log: {
         Row: {
           id: string

@@ -12,6 +12,7 @@ export type {
   EvidenceItem,
   PipelineRun,
   ReportListItem,
+  ReportNote,
   ReportDetail,
   SubmitReportBody,
   SubmitReportResponse,

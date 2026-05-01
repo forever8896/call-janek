@@ -9,6 +9,7 @@
     "generate-types": "supabase gen types typescript --project-id ctldinopklfbcqlwggqh > src/types/db.ts",
     "migrate": "bun scripts/migrate.ts",
     "verify-db": "bun scripts/verify-db.ts",
+    "seed": "bun scripts/seed.ts",
     "test": "bun test",
     "test:watch": "bun test --watch"
   },
