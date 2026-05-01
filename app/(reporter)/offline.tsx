@@ -1,11 +1,11 @@
 import { useRouter } from 'expo-router';
 import React from 'react';
 import { Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { Btn, Card } from '@/components/atoms';
+import { Mascot } from '@/components/mascot';
 import { ReporterShell, ReporterTopBar } from '@/components/reporter/Shell';
 import { useT } from '@/lib/i18n';
-import { BORDER, FONT, HG, hardShadow } from '@/theme/tokens';
+import { BORDER, FONT, HG } from '@/theme/tokens';
 
 export default function Offline() {
   const router = useRouter();
@@ -29,38 +29,16 @@ export default function Offline() {
         }}
       >
         <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          <View
-            style={[
-              {
-                width: 130,
-                height: 130,
-                borderRadius: 24,
-                backgroundColor: HG.peach,
-                borderWidth: BORDER.full,
-                borderColor: HG.ink,
-                alignItems: 'center',
-                justifyContent: 'center',
-              },
-              hardShadow(6),
-            ]}
-          >
-            <Svg width={64} height={64} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M3 9l9-7 9 7M5 9v11h5v-6h4v6h5V9"
-                stroke={HG.ink}
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
+          <View style={{ position: 'relative' }}>
+            <Mascot kind="sad_tourist" size={200} bobble />
             <View
               style={{
                 position: 'absolute',
-                top: -6,
-                right: -6,
+                top: 6,
+                right: 6,
                 backgroundColor: HG.red,
-                paddingHorizontal: 8,
-                paddingVertical: 4,
+                paddingHorizontal: 10,
+                paddingVertical: 5,
                 borderWidth: BORDER.half,
                 borderColor: HG.ink,
                 borderRadius: 999,
@@ -69,7 +47,7 @@ export default function Offline() {
               <Text
                 style={{
                   fontFamily: FONT.bodyBold,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: HG.cream,
                 }}
               >

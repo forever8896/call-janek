@@ -4,7 +4,7 @@ import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Btn, Chip } from '@/components/atoms';
 import { AdminHeader, SectionLabel } from '@/components/admin/Header';
-import { JanekAvatar } from '@/components/illustrations';
+import { Mascot } from '@/components/mascot';
 import { useAuth } from '@/lib/auth';
 import { shortId } from '@/lib/mapping';
 import { supabase } from '@/lib/supabase';
@@ -71,7 +71,7 @@ export default function AdminSettings() {
               gap: 12,
             }}
           >
-            <JanekAvatar size={52} />
+            <Mascot kind="janek" size={64} />
             <View style={{ flex: 1 }}>
               <Text style={{ fontFamily: FONT.displaySemiItalic, fontSize: 18, color: HG.ink }}>
                 {session?.user?.email ?? 'Admin'}

@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import { logger } from '../lib/logger'
+import { env } from '../lib/env'
 
 type Step = 'whisper' | 'spam' | 'dedupe' | 'category' | 'urgency' | 'entities' | 'web_research'
 
@@ -19,18 +20,40 @@ export const _handlers: Record<Step, StepFn> = {
   web_research: (id) => import('./web-research').then((m) => m.runWebResearch(id)),
 }
 
-// Guards against processing the same report concurrently
+// Bounded concurrency pool across reports.
+// `inFlight` dedupes same-report calls (Realtime + poll racing on one row).
+// `pool` caps how many distinct reports run their pipeline in parallel; the rest
+// queue and start as slots free up. CLAUDE.md targets 8–12 in-flight; default 8.
 const inFlight = new Set<string>()
+const queued: Array<{ reportId: string; resolve: () => void; reject: (e: unknown) => void }> = []
+let active = 0
+
+function drain(): void {
+  while (active < env.WORKER_CONCURRENCY && queued.length > 0) {
+    const job = queued.shift()!
+    active++
+    runPipeline(job.reportId)
+      .then(job.resolve, job.reject)
+      .finally(() => {
+        active--
+        inFlight.delete(job.reportId)
+        drain()
+      })
+  }
+}
 
 export async function processReport(reportId: string): Promise<void> {
   if (inFlight.has(reportId)) return
   inFlight.add(reportId)
 
-  try {
-    await runPipeline(reportId)
-  } finally {
-    inFlight.delete(reportId)
-  }
+  return new Promise<void>((resolve, reject) => {
+    queued.push({ reportId, resolve, reject })
+    drain()
+  })
+}
+
+export function _poolStats(): { active: number; queued: number; inFlight: number } {
+  return { active, queued: queued.length, inFlight: inFlight.size }
 }
 
 async function runPipeline(reportId: string): Promise<void> {
@@ -152,12 +175,12 @@ export function startPipelineWorker(): void {
       .eq('status', 'queued')
       .is('pipeline_started_at', null)
       .lt('created_at', new Date(Date.now() - 10_000).toISOString())
-      .limit(10)
+      .limit(env.WORKER_POLL_BATCH)
 
     for (const row of data ?? []) {
       processReport(row.id).catch((err) => logger.error({ reportId: row.id, err }, 'poll pipeline crash'))
     }
   }, 5_000)
 
-  logger.info('pipeline worker started')
+  logger.info({ concurrency: env.WORKER_CONCURRENCY }, 'pipeline worker started')
 }

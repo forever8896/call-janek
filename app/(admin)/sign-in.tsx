@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Btn } from '@/components/atoms';
-import { JanekAvatar } from '@/components/illustrations';
+import { Mascot } from '@/components/mascot';
 import { useAuth } from '@/lib/auth';
 import { BORDER, FONT, HG } from '@/theme/tokens';
 
@@ -66,7 +66,7 @@ export default function AdminSignIn() {
         }}
       >
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <JanekAvatar size={48} />
+          <Mascot kind="janek" size={56} />
           <View>
             <Text
               style={{
@@ -90,13 +90,16 @@ export default function AdminSignIn() {
           </View>
         </View>
 
-        <View style={{ flex: 1, justifyContent: 'center' }}>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <Mascot kind="janek" size={180} bobble />
           <Text
             style={{
               fontFamily: FONT.displaySemi,
               fontSize: 36,
               lineHeight: 38,
               letterSpacing: -0.5,
+              marginTop: 16,
+              textAlign: 'center',
               color: HG.ink,
             }}
           >

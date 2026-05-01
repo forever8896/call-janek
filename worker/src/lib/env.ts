@@ -8,6 +8,8 @@ const schema = z.object({
   TAVILY_API_KEY: z.string().min(1),
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  WORKER_CONCURRENCY: z.coerce.number().int().min(1).max(64).default(8),
+  WORKER_POLL_BATCH: z.coerce.number().int().min(1).max(100).default(20),
 })
 
 const parsed = schema.safeParse(process.env)

@@ -1,14 +1,24 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSequence,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import { Btn, Card, Chip, Hairline, Urgency } from '@/components/atoms';
+import { Mascot } from '@/components/mascot';
 import { ReporterShell, ReporterTopBar } from '@/components/reporter/Shell';
 import { useT } from '@/lib/i18n';
 import { shortId } from '@/lib/mapping';
 import { supabase } from '@/lib/supabase';
 import type { ReportStatus, Category } from '@/lib/types';
-import { BORDER, FONT, HG, hardShadow } from '@/theme/tokens';
+import { FONT, HG } from '@/theme/tokens';
 
 const CAT_LABEL_EN: Record<Category, string> = {
   taxi_scam: 'Taxi scam',
@@ -45,6 +55,63 @@ const STATUS_LABEL_CZ: Record<ReportStatus, string> = {
   archived: 'Archivováno',
   actioned: 'Řešeno',
 };
+
+function ConfirmHero() {
+  const scale = useSharedValue(0.4);
+  const sparkleA = useSharedValue(0);
+  const sparkleB = useSharedValue(0);
+  const sparkleC = useSharedValue(0);
+
+  useEffect(() => {
+    scale.value = withSpring(1, { damping: 9, stiffness: 110 });
+    const twinkle = (sv: typeof sparkleA, delay: number) =>
+      withDelay(
+        delay,
+        withRepeat(
+          withSequence(
+            withTiming(1, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+            withTiming(0.3, { duration: 700, easing: Easing.inOut(Easing.quad) }),
+          ),
+          -1,
+          true,
+        ),
+      );
+    sparkleA.value = twinkle(sparkleA, 200);
+    sparkleB.value = twinkle(sparkleB, 600);
+    sparkleC.value = twinkle(sparkleC, 1000);
+  }, [scale, sparkleA, sparkleB, sparkleC]);
+
+  const heroStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const sA = useAnimatedStyle(() => ({ opacity: sparkleA.value }));
+  const sB = useAnimatedStyle(() => ({ opacity: sparkleB.value }));
+  const sC = useAnimatedStyle(() => ({ opacity: sparkleC.value }));
+
+  return (
+    <View
+      style={{
+        marginTop: 20,
+        height: 200,
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Animated.View style={heroStyle}>
+        <Mascot kind="trdelnik_soyboy" size={170} bobble />
+      </Animated.View>
+      <Animated.Text style={[{ position: 'absolute', top: 10, left: 30, fontSize: 26 }, sA]}>
+        ✦
+      </Animated.Text>
+      <Animated.Text style={[{ position: 'absolute', top: 38, right: 30, fontSize: 22 }, sB]}>
+        ✦
+      </Animated.Text>
+      <Animated.Text style={[{ position: 'absolute', bottom: 16, right: 70, fontSize: 18 }, sC]}>
+        ✦
+      </Animated.Text>
+    </View>
+  );
+}
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
@@ -147,43 +214,7 @@ export default function Confirm() {
       <ReporterTopBar title={t('Tip received ✓', 'Tip přijat ✓')} />
 
       <View style={{ flex: 1, paddingHorizontal: 24 }}>
-        <View
-          style={{
-            marginTop: 20,
-            height: 160,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <View
-            style={[
-              {
-                width: 130,
-                height: 130,
-                borderRadius: 65,
-                backgroundColor: HG.greenSoft,
-                borderWidth: BORDER.full,
-                borderColor: HG.ink,
-                alignItems: 'center',
-                justifyContent: 'center',
-              },
-              hardShadow(6),
-            ]}
-          >
-            <Svg width={60} height={60} viewBox="0 0 24 24" fill="none">
-              <Path
-                d="M5 12l4 4L19 7"
-                stroke={HG.ink}
-                strokeWidth={3.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </Svg>
-          </View>
-          <Text style={{ position: 'absolute', top: 10, left: 30, fontSize: 22 }}>✦</Text>
-          <Text style={{ position: 'absolute', top: 30, right: 40, fontSize: 18 }}>✦</Text>
-          <Text style={{ position: 'absolute', bottom: 10, right: 70, fontSize: 14 }}>✦</Text>
-        </View>
+        <ConfirmHero />
 
         <Text
           style={{

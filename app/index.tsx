@@ -3,12 +3,8 @@ import React from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Btn, Chip } from '@/components/atoms';
-import {
-  IllExchange,
-  IllPragueSkyline,
-  IllTaxi,
-  IllTrdelnik,
-} from '@/components/illustrations';
+import { IllPragueSkyline, IllTaxi } from '@/components/illustrations';
+import { Mascot } from '@/components/mascot';
 import { FONT, HG } from '@/theme/tokens';
 
 export default function Splash() {
@@ -24,7 +20,7 @@ export default function Splash() {
         }}
       >
         {/* Hero illustration */}
-        <View style={{ position: 'relative', height: 220, marginTop: 8 }}>
+        <View style={{ position: 'relative', height: 240, marginTop: 8 }}>
           <View style={{ position: 'absolute', bottom: 0, left: -24, right: -24, opacity: 0.5 }}>
             <IllPragueSkyline width={450} height={90} />
           </View>
@@ -32,31 +28,29 @@ export default function Splash() {
             style={{
               position: 'absolute',
               top: 0,
-              left: -10,
-              transform: [{ rotate: '-8deg' }],
+              left: -16,
             }}
           >
-            <IllTrdelnik size={92} />
+            <Mascot kind="trdelnik_mogger" size={150} bobble rotate={-8} delay={0} />
           </View>
           <View
             style={{
               position: 'absolute',
-              top: 30,
-              right: -8,
-              transform: [{ rotate: '6deg' }],
+              top: 50,
+              right: -10,
             }}
           >
-            <IllTaxi size={100} />
+            <Mascot kind="exchange_scammer" size={140} bobble rotate={6} delay={400} />
           </View>
           <View
             style={{
               position: 'absolute',
-              bottom: 60,
-              left: 90,
-              transform: [{ rotate: '-4deg' }],
+              top: 12,
+              right: 110,
+              transform: [{ rotate: '4deg' }],
             }}
           >
-            <IllExchange size={84} />
+            <IllTaxi size={72} />
           </View>
         </View>
 

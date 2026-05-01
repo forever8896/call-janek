@@ -31,6 +31,7 @@ const mockSupabase = {
   channel: mock(() => ({ on: mock(() => ({ subscribe: mock(() => {}) })) })),
 }
 mock.module('../../lib/supabase', () => ({ supabase: mockSupabase }))
+mock.module('../../lib/env', () => ({ env: { WORKER_CONCURRENCY: 8, WORKER_POLL_BATCH: 20, NODE_ENV: 'test' } }))
 
 // Dynamic import after supabase mock — do NOT mock individual pipeline step modules.
 // Instead, mutate _handlers directly to avoid polluting the module cache for step test files.

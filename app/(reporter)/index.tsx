@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { ReporterShell, ReporterTopBar } from '@/components/reporter/Shell';
 import { RecordButton } from '@/components/reporter/RecordButton';
 import { CatIll, CatKey } from '@/components/illustrations';
+import { Mascot, MascotKind } from '@/components/mascot';
 import { useT } from '@/lib/i18n';
 import { BORDER, FONT, HG, RADIUS, hardShadow } from '@/theme/tokens';
 
@@ -96,7 +97,16 @@ export default function ReporterHome() {
                 hardShadow(2),
               ]}
             >
-              <CatIll cat={cat} size={42} />
+              {(() => {
+                const mascotByCat: Partial<Record<CatKey, MascotKind>> = {
+                  taxi: 'taxi_scam',
+                  exchange: 'exchange_scammer',
+                  menu: 'trdelnik_mogger',
+                  online: 'phone_phishing',
+                };
+                const mk = mascotByCat[cat];
+                return mk ? <Mascot kind={mk} size={48} /> : <CatIll cat={cat} size={42} />;
+              })()}
               <Text
                 style={{
                   fontFamily: FONT.bodyBold,

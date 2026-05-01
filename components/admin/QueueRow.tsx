@@ -1,5 +1,6 @@
 import React from 'react';
 import { Pressable, Text, View } from 'react-native';
+import Animated, { FadeInDown, LinearTransition } from 'react-native-reanimated';
 import { CatIll } from '@/components/illustrations';
 import { Urgency } from '@/components/atoms';
 import type { UIRow } from '@/lib/mapping';
@@ -17,14 +18,23 @@ export function QueueRow({
   item,
   urgencyStyle = 'pill',
   onPress,
+  index = 0,
 }: {
   item: UIRow;
   urgencyStyle?: 'pill' | 'dot' | 'flame';
   onPress?: () => void;
+  index?: number;
 }) {
   const accent = ACCENT[item.cat] || HG.butter;
   return (
-    <Pressable onPress={onPress} style={{ paddingHorizontal: 12, paddingVertical: 6 }}>
+    <Animated.View
+      entering={FadeInDown.delay(Math.min(index, 8) * 35)
+        .duration(300)
+        .springify()
+        .damping(14)}
+      layout={LinearTransition.springify()}
+    >
+      <Pressable onPress={onPress} style={{ paddingHorizontal: 12, paddingVertical: 6 }}>
       <View
         style={{
           backgroundColor: HG.card,
@@ -121,5 +131,6 @@ export function QueueRow({
         </View>
       </View>
     </Pressable>
+    </Animated.View>
   );
 }
