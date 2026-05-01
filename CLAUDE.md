@@ -132,7 +132,7 @@ Stack chosen (above); concrete shape:
 
 - **Supabase project**: one project for the whole app. Local dev via `supabase` CLI + Docker, production on Supabase Cloud.
 - **Postgres schema** (managed via Supabase migrations):
-  - `reports` — id, reporter_id (nullable for anon), description, transcript, status, urgency, category, cluster_id, created_at, updated_at
+  - `reports` — id, reporter_id (nullable for anon), description, transcript, status, urgency, category, cluster_id, demo_run_id (nullable, for demo fixture isolation), created_at, updated_at
   - `report_media` — id, report_id, storage_path, kind (image|video|audio), mime_type
   - `report_clusters` — id, canonical_report_id, summary (groups duplicates)
   - `evidence` — id, report_id, source_url, snippet, fetched_at (web-research output)
@@ -146,10 +146,48 @@ Stack chosen (above); concrete shape:
 - **Pipeline worker** (`worker/` dir, separate package or repo):
   - Bun + Hono.
   - On report insert (`status='queued'`), pick up via Postgres LISTEN/NOTIFY or Supabase Realtime subscription, fall back to a 5s poll.
-  - Steps run in order: spam → dedupe → categorize → urgency → entity extraction → web research. Each step is a row in `pipeline_runs` so a failure restarts at the failed step, not the whole pipeline.
+  - Steps run in order **per report**: spam → dedupe → categorize → urgency → entity extraction → web research. Each step is a row in `pipeline_runs` so a failure restarts at the failed step, not the whole pipeline.
+  - **Concurrent across reports** from day one: capped pool of 8–12 in-flight steps. A serial worker can't produce the visible-flood effect the demo depends on.
   - Whisper: invoked from worker after audio upload completes. Transcript written back to `reports.transcript`, then status flips to `queued` for the LLM steps.
 - **Worker hosting**: any process host (Fly.io / Railway / Render / a small VPS). One worker is enough at our volume.
 - **Promotion gate**: `reports` rows are only visible to admin queue **after** spam + dedupe steps complete. Enforce via `status` column + RLS, not at the client.
+- **Fixture generator** (`worker/fixtures/` or similar): generates believable Czech/Prague scam reports (taxi, exchange, menu, online fraud) with intentional dupes/clusters. Run once to produce a JSON corpus that's checked in; demo loads from it.
+
+## Demo plan — the killer moment
+
+The pitch demo's job is to make "noise → triaged signal" visceral in ~60 seconds: a flood of incoming reports on one side, Janek's queue self-organizing on the other. **Real pipeline, real LLM calls — no scripted replays.**
+
+### Sizing
+
+- **Burst:** ~100–150 fixture reports dripped in over 60s (~2/sec). Big enough to feel like a flood, small enough that the worker makes visible progress.
+- **Worker concurrency:** 8–12 in-flight pipeline steps. Looks busy, stays under any LLM rate limit.
+- **Pre-seeded corpus:** 200–500 historical reports inserted before the demo starts so the dedup step has a real backlog to match against. Without this, clusters never form and the panel looks dead.
+- **Burst composition:** ~20% spam, ~30% obvious dupes of seeded reports, ~50% fresh. Every pipeline step then does visible work on stage.
+- It is *fine* (and more honest) for the demo to end with some reports still `processing`. The story is the *flow*, not an empty queue.
+
+### Visual targets in the admin UI
+
+The three things that have to land:
+1. Three counters ticking in different rhythms — **incoming / processing / triaged**.
+2. **Category bars** filling live as categorization completes.
+3. **Urgency-sorted queue** visibly reordering as urgency scores arrive; **clusters merging** in place when dedup hits.
+
+Animate transitions, don't just re-render. The UI subscribes to Supabase Realtime on the same tables the worker writes to, so demo and prod code paths are identical.
+
+### Constraints this places on the rest of the build
+
+- `reports.demo_run_id` (nullable) lets seeded + burst rows be flagged and reset between runs without nuking real data. In the schema from day one.
+- Worker concurrency from day one (above). Don't ship a serial MVP and try to retrofit.
+- Admin UI is **Realtime-first** from day one — Supabase subscriptions, optimistic local state for animation. Don't build a polling MVP and try to swap.
+- Fixture generator is its own tool (above), separate from runtime code paths.
+
+### Open decision
+
+How is the burst triggered?
+- **In-app demo button** on the admin screen — most impressive on stage, but bakes demo plumbing into the production binary.
+- **Out-of-band CLI** (`bun run demo:burst` from the presenter's laptop) — keeps the app clean, easy to control timing, requires laptop on stage.
+
+Default to CLI unless we have a reason otherwise; revisit before the worker is built.
 
 ## Things NOT to do
 
