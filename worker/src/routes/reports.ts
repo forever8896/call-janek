@@ -83,8 +83,24 @@ reportsRouter.post(
       await supabase.from('report_media').insert(mediaRows)
     }
 
+    // If audio_path was supplied, Whisper already ran via /reports/transcribe
+    // BEFORE this report row existed. Record that as a `done` pipeline run so
+    // the audit reads `whisper · done` instead of a misleading `skipped`. The
+    // runner short-circuits on existing `done` rows for the same step.
+    if (body.audio_path) {
+      const now = new Date().toISOString()
+      await supabase.from('pipeline_runs').insert({
+        report_id:   report.id,
+        step:        'whisper',
+        status:      'done',
+        attempts:    1,
+        started_at:  now,
+        finished_at: now,
+        result:      { transcript_length: body.text_description.length, source: 'pre_transcribed' } as never,
+      })
+    }
+
     // Fire-and-forget: pipeline runs async, reporter gets instant response.
-    // If audio_path was supplied, transcript is already set, so whisper step skips.
     processReport(report.id).catch((err) =>
       logger.error({ reportId: report.id, err }, 'pipeline trigger failed')
     )
