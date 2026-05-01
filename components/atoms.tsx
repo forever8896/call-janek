@@ -48,7 +48,7 @@ export function Chip({
         style,
       ]}
     >
-      {typeof children === 'string' ? (
+      {typeof children === 'string' || typeof children === 'number' ? (
         <Text
           style={[
             {
@@ -60,7 +60,7 @@ export function Chip({
             textStyle,
           ]}
         >
-          {children}
+          {String(children)}
         </Text>
       ) : (
         <ChipChildren color={color} sm={sm} textStyle={textStyle}>
@@ -85,7 +85,7 @@ function ChipChildren({
   return (
     <>
       {React.Children.map(children, (c) =>
-        typeof c === 'string' ? (
+        typeof c === 'string' || typeof c === 'number' ? (
           <Text
             style={[
               {
@@ -97,7 +97,7 @@ function ChipChildren({
               textStyle,
             ]}
           >
-            {c}
+            {String(c)}
           </Text>
         ) : (
           c

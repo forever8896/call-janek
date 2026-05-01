@@ -36,6 +36,7 @@ export interface MediaItem {
   kind: MediaKind
   mime_type: string
   size_bytes: number | null
+  signed_url?: string | null   // populated by /admin/reports/:id, valid 1h
 }
 
 export interface EvidenceItem {

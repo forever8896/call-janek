@@ -134,6 +134,22 @@ adminRouter.get('/reports/:id', async (c) => {
     target_id: id,
   })
 
+  // Generate 1-hour signed URLs for each media item so the admin client can
+  // play audio + render images directly. Buckets are private; service-role key
+  // mints the URLs.
+  const mediaWithUrls = await Promise.all(
+    (media ?? []).map(async (m) => {
+      const bucket = m.kind === 'audio' ? 'voice' : 'media'
+      const { data, error } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(m.storage_path, 3600)
+      return {
+        ...m,
+        signed_url: !error && data ? data.signedUrl : null,
+      }
+    }),
+  )
+
   return c.json({
     id:               report.id,
     created_at:       report.created_at,
@@ -146,7 +162,7 @@ adminRouter.get('/reports/:id', async (c) => {
     urgency_reason:   report.urgency_reason ?? '',
     cluster_id:       report.cluster_id,
     entities:         (report.entities as never) ?? [],
-    media:            media ?? [],
+    media:            mediaWithUrls,
     evidence:         evidence ?? [],
     cluster,
     pipeline_runs:    runs ?? [],

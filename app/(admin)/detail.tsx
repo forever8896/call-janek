@@ -2,8 +2,10 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Btn, Chip, Urgency, Waveform } from '@/components/atoms';
+import { Image } from 'expo-image';
+import { Btn, Chip, Urgency } from '@/components/atoms';
 import { AdminHeader, HeaderIconBtn, SectionLabel } from '@/components/admin/Header';
+import { AudioPlayer } from '@/components/admin/AudioPlayer';
 import { ApiError, getAdminReport, patchAdminReport } from '@/lib/api';
 import { shortId } from '@/lib/mapping';
 import type { Category, ReportDetail } from '@/lib/types';
@@ -192,70 +194,58 @@ export default function AdminDetail() {
                 >
                   &ldquo;{report.text_description || report.transcript || '(empty)'}&rdquo;
                 </Text>
-                {report.media.some((m) => m.kind === 'audio') && (
-                  <View
-                    style={{
-                      marginTop: 10,
-                      paddingHorizontal: 10,
-                      paddingVertical: 8,
-                      backgroundColor: HG.cream,
-                      borderWidth: BORDER.half,
-                      borderColor: HG.rule,
-                      borderRadius: 10,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 10,
-                    }}
-                  >
-                    <View
-                      style={{
-                        width: 30,
-                        height: 30,
-                        borderRadius: 15,
-                        backgroundColor: HG.amberSoft,
-                        borderWidth: BORDER.half,
-                        borderColor: HG.ink,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      <Text style={{ fontFamily: FONT.bodyBold, color: HG.ink, fontSize: 14 }}>
-                        ▶
-                      </Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Waveform color={HG.amberSoft} active={false} bars={20} />
-                    </View>
-                  </View>
-                )}
                 {report.media
-                  .filter((m) => m.kind === 'image')
-                  .slice(0, 2)
-                  .map((m, i) => (
+                  .filter((m) => m.kind === 'audio' && m.signed_url)
+                  .map((m) => (
+                    <View key={m.id} style={{ marginTop: 10 }}>
+                      <AudioPlayer uri={m.signed_url as string} />
+                    </View>
+                  ))}
+                {report.media
+                  .filter((m) => (m.kind === 'image' || m.kind === 'video') && m.signed_url)
+                  .map((m) => (
                     <View
                       key={m.id}
                       style={{
                         marginTop: 8,
-                        height: 70,
-                        backgroundColor: i === 0 ? HG.peach : HG.sky,
+                        height: 180,
                         borderRadius: 10,
                         borderWidth: BORDER.half,
                         borderColor: HG.ink,
-                        alignItems: 'center',
-                        justifyContent: 'center',
+                        overflow: 'hidden',
+                        backgroundColor: HG.sand,
                       }}
                     >
-                      <Text
-                        style={{
-                          fontFamily: FONT.bodyBold,
-                          fontSize: 10,
-                          color: HG.ink,
-                          textTransform: 'uppercase',
-                          letterSpacing: 0.5,
-                        }}
-                      >
-                        📷 {m.kind}
-                      </Text>
+                      <Image
+                        source={{ uri: m.signed_url as string }}
+                        style={{ width: '100%', height: '100%' }}
+                        contentFit="cover"
+                        transition={150}
+                      />
+                      {m.kind === 'video' && (
+                        <View
+                          style={{
+                            position: 'absolute',
+                            bottom: 6,
+                            right: 6,
+                            paddingHorizontal: 6,
+                            paddingVertical: 2,
+                            backgroundColor: HG.ink,
+                            borderRadius: 4,
+                          }}
+                        >
+                          <Text
+                            style={{
+                              color: HG.cream,
+                              fontFamily: FONT.bodyBold,
+                              fontSize: 9,
+                              letterSpacing: 0.5,
+                            }}
+                          >
+                            ▶ VIDEO
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   ))}
               </View>
