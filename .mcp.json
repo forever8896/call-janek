@@ -5,7 +5,9 @@
       "command": "bunx",
       "args": [
         "-y",
-        "expo-mcp@latest"
+        "expo-mcp@latest",
+        "--dev-server-url",
+        "http://localhost:8081"
       ],
       "env": {}
     }

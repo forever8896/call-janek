@@ -83,9 +83,12 @@ eas update --channel production     # OTA update
 
 ## Expo MCP
 
-The Expo MCP server is registered at project scope in `.mcp.json` (runs `bunx -y expo-mcp@latest`). It gives Claude Expo-aware tools (project introspection, doctor, etc.).
+The Expo MCP server is registered at project scope in `.mcp.json` and points at `http://localhost:8081` (Metro's default). It attaches to a **running Expo dev server**, so the start order is:
 
-If MCP tools aren't showing up, restart Claude Code in this directory so it re-reads `.mcp.json`.
+1. `bun expo start` — leave it running (gives you `http://localhost:8081` by default).
+2. Restart Claude Code in this directory so it re-reads `.mcp.json` and connects.
+
+If `claude mcp list` shows `expo: ✗ Failed to connect`, it's almost always because the dev server isn't running yet. Start Metro first, then restart Claude. If you run Metro on a non-default port, update the `--dev-server-url` arg in `.mcp.json` to match.
 
 ## Project layout (current — default expo-router template)
 
