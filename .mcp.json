@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "expo": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": [
+        "-y",
+        "expo-mcp@latest"
+      ],
+      "env": {}
+    }
+  }
+}

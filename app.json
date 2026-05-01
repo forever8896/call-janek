@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "expo-rubes-scaffold",
-    "slug": "expo-rubes-scaffold",
+    "name": "expo-rubes",
+    "slug": "expo-rubes",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "exporubesscaffold",
+    "scheme": "exporubes",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
