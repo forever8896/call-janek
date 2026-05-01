@@ -4,50 +4,40 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Btn } from '@/components/atoms';
 import { Mascot } from '@/components/mascot';
-import { PragueScroll } from '@/components/prague-scroll';
+import { PRAGUE_BG, PragueScroll } from '@/components/prague-scroll';
 import { FONT, HG } from '@/theme/tokens';
 
 export default function Splash() {
   const router = useRouter();
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: HG.cream }}>
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingHorizontal: 24,
-          paddingTop: 50,
-          paddingBottom: 24,
-        }}
-      >
-        {/* Skyline (4x scale, bottom-clipped so empty cream top falls off) */}
-        <View style={{ position: 'relative', height: 220, marginTop: 8, overflow: 'hidden' }}>
-          <View
-            style={{
-              position: 'absolute',
-              bottom: 0,
-              left: -24,
-              right: -24,
-              height: 440,
-              justifyContent: 'flex-end',
-            }}
-          >
-            <PragueScroll height={440} opacity={0.55} speedPxPerSec={28} />
-          </View>
-        </View>
+    <View style={{ flex: 1, backgroundColor: PRAGUE_BG }}>
+      {/* Skyline runs edge-to-edge from the top of the screen, no cropping. */}
+      <SafeAreaView edges={['top']} style={{ backgroundColor: PRAGUE_BG }}>
+        <PragueScroll height={160} opacity={1} speedPxPerSec={22} />
+      </SafeAreaView>
 
-        {/* Characters live below the skyline */}
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginTop: 8,
-            gap: -12,
+      <SafeAreaView style={{ flex: 1 }} edges={['bottom', 'left', 'right']}>
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            paddingHorizontal: 24,
+            paddingTop: 8,
+            paddingBottom: 24,
           }}
         >
-          <Mascot kind="trdelnik_mogger" size={140} bobble rotate={-6} delay={0} />
-          <Mascot kind="angry_sunka" size={130} bobble rotate={5} delay={500} />
-        </View>
+          {/* Characters live below the skyline */}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginTop: 8,
+              gap: -12,
+            }}
+          >
+            <Mascot kind="trdelnik_mogger" size={140} bobble rotate={-6} delay={0} />
+            <Mascot kind="angry_sunka" size={130} bobble rotate={5} delay={500} />
+          </View>
 
         <Text
           style={{
@@ -105,7 +95,8 @@ export default function Splash() {
             </Text>
           </Pressable>
         </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   );
 }

@@ -15,6 +15,7 @@ import Animated, {
 
 const SOURCE = require('@/assets/images/prague-sidescroll.png');
 const ASPECT = 2172 / 724; // ≈ 3.0
+export const PRAGUE_BG = '#FDEFDF';   // sampled from the source image
 
 export function PragueScroll({
   height = 100,
