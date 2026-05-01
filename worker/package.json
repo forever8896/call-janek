@@ -10,6 +10,7 @@
     "migrate": "bun scripts/migrate.ts",
     "verify-db": "bun scripts/verify-db.ts",
     "seed": "bun scripts/seed.ts",
+    "burst": "bun scripts/burst.ts",
     "test": "bun test",
     "test:watch": "bun test --watch"
   },
