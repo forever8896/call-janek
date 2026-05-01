@@ -137,6 +137,19 @@ export default function AdminQueue() {
     load();
   };
 
+  // Manual refresh button: spins the icon on tap as tactile feedback that the
+  // request fired, even before the network roundtrip lands.
+  const refreshSpin = useRef(new Animated.Value(0)).current;
+  const onTapRefresh = useCallback(() => {
+    refreshSpin.setValue(0);
+    Animated.timing(refreshSpin, {
+      toValue: 1,
+      duration: 700,
+      useNativeDriver: true,
+    }).start();
+    onRefresh();
+  }, [refreshSpin, onRefresh]);
+
   const critical = reports.filter((r) => (r.urgency_score ?? 0) >= 9).length;
   const high = reports.filter((r) => {
     const s = r.urgency_score ?? 0;
@@ -156,6 +169,37 @@ export default function AdminQueue() {
           } · ${reports.length} ${t('SHOWN', 'ZOBRAZENO')}`}
           right={
             <View style={{ flexDirection: 'row', gap: 6 }}>
+              <Pressable
+                onPress={onTapRefresh}
+                hitSlop={6}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  backgroundColor: HG.card,
+                  borderWidth: BORDER.half,
+                  borderColor: HG.ink,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Animated.Text
+                  style={{
+                    fontFamily: FONT.bodyBold,
+                    color: HG.ink,
+                    transform: [
+                      {
+                        rotate: refreshSpin.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ['0deg', '360deg'],
+                        }),
+                      },
+                    ],
+                  }}
+                >
+                  ↻
+                </Animated.Text>
+              </Pressable>
               <HeaderIconBtn onPress={() => router.push('/(admin)/search')}>⌕</HeaderIconBtn>
               <HeaderIconBtn onPress={() => router.push('/(admin)/settings')}>≡</HeaderIconBtn>
             </View>
